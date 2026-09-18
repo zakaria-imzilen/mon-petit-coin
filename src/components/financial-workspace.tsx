@@ -60,16 +60,22 @@ type View =
   | "collecte"
   | "alertes"
   | "comparaison"
-  | "rapports";
+  | "rapports"
+  | "configuration";
 type Tone = "neutral" | "success" | "warning" | "danger" | "info";
 type ClientTab =
-  | "overview"
-  | "performance"
-  | "periods"
-  | "financing"
+  "overview" | "performance" | "periods" | "financing" | "covenants" | "documents" | "history";
+type ConfigSection =
+  | "dashboard"
+  | "counterparties"
+  | "dictionary"
+  | "templates"
+  | "metrics"
+  | "questionnaires"
+  | "methodologies"
+  | "products"
   | "covenants"
-  | "documents"
-  | "history";
+  | "alerts";
 
 const dossiers = [
   {
@@ -81,7 +87,7 @@ const dossiers = [
     risk: "B+",
     progress: 72,
     update: "Aujourd’hui, 09:42",
-    owner: "S. El Amrani",
+    owner: "Caciopee",
     tone: "warning" as Tone,
   },
   {
@@ -186,6 +192,10 @@ const nav: { group?: string; items: { id: View; label: string; icon: LucideIcon 
       { id: "rapports", label: "Rapports", icon: FileBarChart },
       { id: "comparaison", label: "Benchmarking", icon: BarChart3 },
     ],
+  },
+  {
+    group: "ADMINISTRATION",
+    items: [{ id: "configuration", label: "Configuration", icon: Settings2 }],
   },
 ];
 
@@ -310,7 +320,7 @@ function Dashboard({ go }: { go: (v: View) => void }) {
   return (
     <>
       <PageHeader
-        title="Bonjour, Samira"
+        title="Bonjour, Mr. Amine"
         description="Voici les priorités de votre équipe pour le vendredi 18 septembre."
         action={
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -982,7 +992,7 @@ function Evaluation() {
 }
 function Opinions() {
   const opinions: [string, string, string, Tone][] = [
-    ["S. El Amrani", "Analyste", "Favorable", "success"],
+    ["Caciopee", "Analyste", "Favorable", "success"],
     ["N. Berrada", "Direction des risques", "Favorable avec conditions", "warning"],
     ["A. Chraïbi", "Juridique", "En cours", "info"],
     ["Comité de crédit", "Direction", "En attente", "neutral"],
@@ -1213,9 +1223,33 @@ function ClientWorkspace({ back }: { back: () => void }) {
   ];
 
   const financings = [
-    { name: "Financing #002", type: "Public Market Financing", approved: "10,0 M MAD", outstanding: "6,2 M MAD", available: "3,8 M MAD", status: "Active", maturity: "24 janv. 2028" },
-    { name: "Financing #001", type: "Working capital line", approved: "8,5 M MAD", outstanding: "4,9 M MAD", available: "3,6 M MAD", status: "Active", maturity: "18 déc. 2026" },
-    { name: "Financing #003", type: "Guarantee facility", approved: "4,0 M MAD", outstanding: "1,4 M MAD", available: "2,6 M MAD", status: "Available", maturity: "12 mars 2027" },
+    {
+      name: "Financing #002",
+      type: "Public Market Financing",
+      approved: "10,0 M MAD",
+      outstanding: "6,2 M MAD",
+      available: "3,8 M MAD",
+      status: "Active",
+      maturity: "24 janv. 2028",
+    },
+    {
+      name: "Financing #001",
+      type: "Working capital line",
+      approved: "8,5 M MAD",
+      outstanding: "4,9 M MAD",
+      available: "3,6 M MAD",
+      status: "Active",
+      maturity: "18 déc. 2026",
+    },
+    {
+      name: "Financing #003",
+      type: "Guarantee facility",
+      approved: "4,0 M MAD",
+      outstanding: "1,4 M MAD",
+      available: "2,6 M MAD",
+      status: "Available",
+      maturity: "12 mars 2027",
+    },
   ];
 
   const covenants = [
@@ -1248,7 +1282,9 @@ function ClientWorkspace({ back }: { back: () => void }) {
 
       <div className="mb-6 flex flex-col justify-between gap-4 xl:flex-row xl:items-start">
         <div>
-          <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-primary">Client acquis</p>
+          <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-primary">
+            Client acquis
+          </p>
           <h1 className="text-3xl font-bold text-foreground">IMF Atlas</h1>
           <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
             <span>Institution de microfinance</span>
@@ -1284,7 +1320,7 @@ function ClientWorkspace({ back }: { back: () => void }) {
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
           <p className="text-xs uppercase text-muted-foreground">Relationship owner</p>
-          <p className="mt-2 text-xl font-bold">S. El Amrani</p>
+          <p className="mt-2 text-xl font-bold">Caciopee</p>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
           <p className="text-xs uppercase text-muted-foreground">Date onboarded</p>
@@ -1354,14 +1390,25 @@ function ClientWorkspace({ back }: { back: () => void }) {
                 />
                 <div className="grid gap-4 p-5 md:grid-cols-2">
                   {healthMetrics.map((metric) => (
-                    <div key={metric.label} className="rounded-md border border-border bg-muted/20 p-4">
+                    <div
+                      key={metric.label}
+                      className="rounded-md border border-border bg-muted/20 p-4"
+                    >
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-sm font-medium text-muted-foreground">{metric.label}</p>
-                        <span className={cn(
-                          "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold",
-                          metric.trend === "up" ? "bg-success/10 text-success" : "bg-warning/10 text-warning-foreground",
-                        )}>
-                          {metric.trend === "up" ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold",
+                            metric.trend === "up"
+                              ? "bg-success/10 text-success"
+                              : "bg-warning/10 text-warning-foreground",
+                          )}
+                        >
+                          {metric.trend === "up" ? (
+                            <TrendingUp className="size-3" />
+                          ) : (
+                            <TrendingDown className="size-3" />
+                          )}
                           {metric.change}
                         </span>
                       </div>
@@ -1375,10 +1422,7 @@ function ClientWorkspace({ back }: { back: () => void }) {
               </Panel>
 
               <Panel>
-                <PanelTitle
-                  title="Exposure Summary"
-                  subtitle="Current risk to the institution"
-                />
+                <PanelTitle title="Exposure Summary" subtitle="Current risk to the institution" />
                 <div className="space-y-4 p-5">
                   <div>
                     <p className="text-xs uppercase text-muted-foreground">Total exposure</p>
@@ -1408,10 +1452,13 @@ function ClientWorkspace({ back }: { back: () => void }) {
 
             <div className="grid gap-5 xl:grid-cols-[1.3fr_0.9fr]">
               <Panel>
-                <PanelTitle title="Performance Trend" subtitle="Selected indicators over the last 8 quarters" />
+                <PanelTitle
+                  title="Performance Trend"
+                  subtitle="Selected indicators over the last 8 quarters"
+                />
                 <div className="p-5">
                   <div className="mb-4 flex flex-wrap gap-2">
-                    {['Portfolio', 'PAR30', 'ROA', 'Solvability', 'Liquidity'].map((metric) => (
+                    {["Portfolio", "PAR30", "ROA", "Solvability", "Liquidity"].map((metric) => (
                       <button
                         key={metric}
                         className="rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground hover:border-primary hover:text-primary"
@@ -1422,8 +1469,14 @@ function ClientWorkspace({ back }: { back: () => void }) {
                   </div>
                   <div className="flex h-44 items-end gap-3 rounded-md bg-muted/20 px-3 pb-3 pt-5">
                     {[42, 48, 52, 51, 56, 58, 60, 64].map((height, index) => (
-                      <div key={index} className="flex flex-1 flex-col items-center justify-end gap-2">
-                        <div className="w-full rounded-t-md bg-gradient-to-t from-primary/70 to-primary/30" style={{ height: `${height}%` }} />
+                      <div
+                        key={index}
+                        className="flex flex-1 flex-col items-center justify-end gap-2"
+                      >
+                        <div
+                          className="w-full rounded-t-md bg-gradient-to-t from-primary/70 to-primary/30"
+                          style={{ height: `${height}%` }}
+                        />
                         <span className="text-[10px] text-muted-foreground">Q{8 - index}</span>
                       </div>
                     ))}
@@ -1432,18 +1485,37 @@ function ClientWorkspace({ back }: { back: () => void }) {
               </Panel>
 
               <Panel>
-                <PanelTitle title="Active Alerts" subtitle="Most important events requiring attention" action={<Button variant="ghost" size="sm">View all alerts</Button>} />
+                <PanelTitle
+                  title="Active Alerts"
+                  subtitle="Most important events requiring attention"
+                  action={
+                    <Button variant="ghost" size="sm">
+                      View all alerts
+                    </Button>
+                  }
+                />
                 <div className="divide-y divide-border p-2">
                   {[
                     ["PAR30 covenant breached", "5,8% > 5,0%", "18 sept. 2026", "danger"],
-                    ["Reporting data incomplete", "3 mandatory fields missing", "16 sept. 2026", "warning"],
+                    [
+                      "Reporting data incomplete",
+                      "3 mandatory fields missing",
+                      "16 sept. 2026",
+                      "warning",
+                    ],
                     ["Document expiration", "Board minutes due", "09 sept. 2026", "info"],
                   ].map(([title, meta, date, tone]) => (
                     <div key={title} className="flex items-start gap-3 p-3">
-                      <span className={cn(
-                        "mt-1 flex size-8 items-center justify-center rounded-md",
-                        tone === "danger" ? "bg-danger-soft text-destructive" : tone === "warning" ? "bg-warning/15 text-warning-foreground" : "bg-info-soft text-primary",
-                      )}>
+                      <span
+                        className={cn(
+                          "mt-1 flex size-8 items-center justify-center rounded-md",
+                          tone === "danger"
+                            ? "bg-danger-soft text-destructive"
+                            : tone === "warning"
+                              ? "bg-warning/15 text-warning-foreground"
+                              : "bg-info-soft text-primary",
+                        )}
+                      >
                         <AlertTriangle className="size-4" />
                       </span>
                       <div className="flex-1">
@@ -1459,18 +1531,30 @@ function ClientWorkspace({ back }: { back: () => void }) {
 
             <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
               <Panel>
-                <PanelTitle title="Upcoming Actions" subtitle="Operational follow-ups for the relationship" />
+                <PanelTitle
+                  title="Upcoming Actions"
+                  subtitle="Operational follow-ups for the relationship"
+                />
                 <div className="space-y-3 p-5">
                   {[
                     ["Reporting period due", "Q3 2026 package due in 9 days", "warning"],
                     ["Covenant review", "DSCR review requested by risk committee", "danger"],
                     ["Document review", "Insurance certificate expires on 30/11", "info"],
                   ].map(([label, desc, tone]) => (
-                    <div key={label} className="flex items-start gap-3 rounded-md border border-border p-3">
-                      <span className={cn(
-                        "mt-0.5 flex size-6 items-center justify-center rounded-md",
-                        tone === "danger" ? "bg-danger-soft text-destructive" : tone === "warning" ? "bg-warning/15 text-warning-foreground" : "bg-info-soft text-primary",
-                      )}>
+                    <div
+                      key={label}
+                      className="flex items-start gap-3 rounded-md border border-border p-3"
+                    >
+                      <span
+                        className={cn(
+                          "mt-0.5 flex size-6 items-center justify-center rounded-md",
+                          tone === "danger"
+                            ? "bg-danger-soft text-destructive"
+                            : tone === "warning"
+                              ? "bg-warning/15 text-warning-foreground"
+                              : "bg-info-soft text-primary",
+                        )}
+                      >
                         <Clock3 className="size-3.5" />
                       </span>
                       <div>
@@ -1512,7 +1596,10 @@ function ClientWorkspace({ back }: { back: () => void }) {
 
         {tab === "performance" && (
           <Panel>
-            <PanelTitle title="Financial Performance" subtitle="Detailed monitoring by business category" />
+            <PanelTitle
+              title="Financial Performance"
+              subtitle="Detailed monitoring by business category"
+            />
             <div className="overflow-x-auto p-5">
               <table className="w-full min-w-[760px] text-left text-sm">
                 <thead>
@@ -1526,16 +1613,20 @@ function ClientWorkspace({ back }: { back: () => void }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {performanceRows.map(([category, metric, current, previous, variation, status, tone]) => (
-                    <tr key={metric} className="align-top">
-                      <td className="py-3 pr-4 font-medium">{category}</td>
-                      <td className="py-3 pr-4">{metric}</td>
-                      <td className="py-3 pr-4 font-semibold">{current}</td>
-                      <td className="py-3 pr-4 text-muted-foreground">{previous}</td>
-                      <td className="py-3 pr-4">{variation}</td>
-                      <td className="py-3 pr-4"><Status tone={tone as Tone}>{status}</Status></td>
-                    </tr>
-                  ))}
+                  {performanceRows.map(
+                    ([category, metric, current, previous, variation, status, tone]) => (
+                      <tr key={metric} className="align-top">
+                        <td className="py-3 pr-4 font-medium">{category}</td>
+                        <td className="py-3 pr-4">{metric}</td>
+                        <td className="py-3 pr-4 font-semibold">{current}</td>
+                        <td className="py-3 pr-4 text-muted-foreground">{previous}</td>
+                        <td className="py-3 pr-4">{variation}</td>
+                        <td className="py-3 pr-4">
+                          <Status tone={tone as Tone}>{status}</Status>
+                        </td>
+                      </tr>
+                    ),
+                  )}
                 </tbody>
               </table>
             </div>
@@ -1544,7 +1635,10 @@ function ClientWorkspace({ back }: { back: () => void }) {
 
         {tab === "periods" && (
           <Panel>
-            <PanelTitle title="Reporting Periods" subtitle="Financial package submissions and validation history" />
+            <PanelTitle
+              title="Reporting Periods"
+              subtitle="Financial package submissions and validation history"
+            />
             <div className="overflow-x-auto p-5">
               <table className="w-full min-w-[760px] text-left text-sm">
                 <thead>
@@ -1563,7 +1657,15 @@ function ClientWorkspace({ back }: { back: () => void }) {
                       <td className="py-3 pr-4">{date}</td>
                       <td className="py-3 pr-4">{completeness}</td>
                       <td className="py-3 pr-4">{validation}</td>
-                      <td className="py-3 pr-4"><Status tone={tone as Tone}>{tone === "success" ? "Validated" : tone === "warning" ? "Review" : "Urgent"}</Status></td>
+                      <td className="py-3 pr-4">
+                        <Status tone={tone as Tone}>
+                          {tone === "success"
+                            ? "Validated"
+                            : tone === "warning"
+                              ? "Review"
+                              : "Urgent"}
+                        </Status>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -1584,7 +1686,9 @@ function ClientWorkspace({ back }: { back: () => void }) {
                         <h3 className="mt-1 text-lg font-bold">{item.name}</h3>
                         <p className="text-sm text-muted-foreground">{item.type}</p>
                       </div>
-                      <Status tone={item.status === "Active" ? "success" : "info"}>{item.status}</Status>
+                      <Status tone={item.status === "Active" ? "success" : "info"}>
+                        {item.status}
+                      </Status>
                     </div>
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
                       <div className="rounded-md border border-border p-3">
@@ -1609,7 +1713,10 @@ function ClientWorkspace({ back }: { back: () => void }) {
               </div>
 
               <Panel>
-                <PanelTitle title="Exposure Overview" subtitle="Current financing risk to this client" />
+                <PanelTitle
+                  title="Exposure Overview"
+                  subtitle="Current financing risk to this client"
+                />
                 <div className="space-y-5 p-5">
                   <div>
                     <p className="text-xs uppercase text-muted-foreground">Total exposure</p>
@@ -1638,7 +1745,10 @@ function ClientWorkspace({ back }: { back: () => void }) {
         {tab === "covenants" && (
           <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
             <Panel>
-              <PanelTitle title="Active Covenants" subtitle="Current thresholds and monitoring status" />
+              <PanelTitle
+                title="Active Covenants"
+                subtitle="Current thresholds and monitoring status"
+              />
               <div className="overflow-x-auto p-5">
                 <table className="w-full text-left text-sm">
                   <thead>
@@ -1655,7 +1765,9 @@ function ClientWorkspace({ back }: { back: () => void }) {
                         <td className="py-3 pr-4 font-medium">{name}</td>
                         <td className="py-3 pr-4">{current}</td>
                         <td className="py-3 pr-4">{threshold}</td>
-                        <td className="py-3 pr-4"><Status tone={tone as Tone}>{status}</Status></td>
+                        <td className="py-3 pr-4">
+                          <Status tone={tone as Tone}>{status}</Status>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1667,8 +1779,20 @@ function ClientWorkspace({ back }: { back: () => void }) {
               <PanelTitle title="Alerts" subtitle="Lifecycle from detection to resolution" />
               <div className="space-y-3 p-5">
                 {[
-                  ["PAR30 covenant breach", "Critical", "5,8% > 5,0%", "Detected 18/09/2026", "danger"],
-                  ["Data missing", "Medium", "3 required fields", "Acknowledged 16/09/2026", "warning"],
+                  [
+                    "PAR30 covenant breach",
+                    "Critical",
+                    "5,8% > 5,0%",
+                    "Detected 18/09/2026",
+                    "danger",
+                  ],
+                  [
+                    "Data missing",
+                    "Medium",
+                    "3 required fields",
+                    "Acknowledged 16/09/2026",
+                    "warning",
+                  ],
                   ["Board document review", "Low", "Minutes to validate", "In progress", "info"],
                 ].map(([label, severity, metric, date, tone]) => (
                   <div key={label} className="rounded-md border border-border p-3">
@@ -1687,7 +1811,10 @@ function ClientWorkspace({ back }: { back: () => void }) {
 
         {tab === "documents" && (
           <Panel>
-            <PanelTitle title="Client Documents" subtitle="Legal, financial, reporting and financing records" />
+            <PanelTitle
+              title="Client Documents"
+              subtitle="Legal, financial, reporting and financing records"
+            />
             <div className="overflow-x-auto p-5">
               <table className="w-full min-w-[720px] text-left text-sm">
                 <thead>
@@ -1706,7 +1833,9 @@ function ClientWorkspace({ back }: { back: () => void }) {
                       <td className="py-3 pr-4">{type}</td>
                       <td className="py-3 pr-4">{period}</td>
                       <td className="py-3 pr-4">{date}</td>
-                      <td className="py-3 pr-4"><Status tone={tone as Tone}>{status}</Status></td>
+                      <td className="py-3 pr-4">
+                        <Status tone={tone as Tone}>{status}</Status>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -1717,7 +1846,10 @@ function ClientWorkspace({ back }: { back: () => void }) {
 
         {tab === "history" && (
           <Panel>
-            <PanelTitle title="Relationship History" subtitle="Key events and milestones over time" />
+            <PanelTitle
+              title="Relationship History"
+              subtitle="Key events and milestones over time"
+            />
             <div className="p-5">
               <div className="space-y-4 border-l border-border pl-5">
                 {history.map(([date, event]) => (
@@ -1732,6 +1864,584 @@ function ClientWorkspace({ back }: { back: () => void }) {
           </Panel>
         )}
       </div>
+    </>
+  );
+}
+
+function ConfigurationWorkspace() {
+  const [section, setSection] = useState<ConfigSection>("dashboard");
+
+  const sections: { id: ConfigSection; label: string }[] = [
+    { id: "dashboard", label: "Vue d’ensemble" },
+    { id: "counterparties", label: "Types de contreparties" },
+    { id: "dictionary", label: "Dictionnaire des données" },
+    { id: "templates", label: "Modèles de collecte" },
+    { id: "metrics", label: "Indicateurs" },
+    { id: "questionnaires", label: "Questionnaires" },
+    { id: "methodologies", label: "Méthodes" },
+    { id: "products", label: "Produits de financement" },
+    { id: "covenants", label: "Covenants" },
+    { id: "alerts", label: "Alertes & actions" },
+  ];
+
+  const summaryCards = [
+    ["Types de contreparties", "5", "Actifs", "success"],
+    ["Indicateurs configurés", "48", "Validation OK", "success"],
+    ["Méthodes actives", "12", "3 en validation", "warning"],
+    ["Produits de financement", "9", "2 à revoir", "info"],
+  ];
+
+  const counterparties = [
+    ["IMF", "Institution de microfinance", "Actif", "48 champs", "2 méthodes"],
+    ["TPME", "Petite & moyenne entreprise", "Actif", "36 champs", "3 méthodes"],
+    ["Banque", "Institution financière", "Actif", "42 champs", "1 méthode"],
+    ["Coopérative", "Organisation coopérative", "Inactif", "21 champs", "1 méthode"],
+  ];
+
+  const dictionary = [
+    ["PAR30", "Portfolio", "Pourcentage", "%", "IMF", "Oui", "Actif"],
+    ["ROA", "Financier", "Pourcentage", "%", "IMF", "Oui", "Actif"],
+    ["DSCR", "Dette", "Pourcentage", "%", "TPME", "Oui", "Actif"],
+    ["Revenu", "Performance", "Monnaie", "MAD", "TPME", "Oui", "Validation"],
+  ];
+
+  const metrics = [
+    ["PAR30", "Portfolio quality", "IMF", "Net impair / portefeuille", "Actif", "5 règles"],
+    ["ROA", "Rentabilité", "IMF", "Résultat net / actifs moyens", "Actif", "2 méthodes"],
+    ["DSCR", "Solvabilité", "TPME", "Cash flow / dette", "Actif", "3 covenants"],
+    ["EBITDA margin", "Rentabilité", "TPME", "EBITDA / revenue", "Brouillon", "1 méthode"],
+  ];
+
+  const questionnaires = [
+    ["Questionnaire IMF", "IMF", "6 sections", "28 questions", "Actif"],
+    ["Questionnaire PME", "TPME", "5 sections", "19 questions", "Actif"],
+    ["Questionnaire banque", "Banque", "4 sections", "16 questions", "À valider"],
+  ];
+
+  const methodologies = [
+    ["JAIDA IMF 2026", "IMF", "Actif", "100%", "4 dimensions"],
+    ["Risk SME 2026", "TPME", "Actif", "92%", "5 dimensions"],
+    ["Banque prudential 2026", "Banque", "Brouillon", "68%", "3 dimensions"],
+  ];
+
+  const financingProducts = [
+    ["Prêt de trésorerie", "Crédit", "MAD", "2 M - 20 M", "Actif", "5 règles"],
+    ["Financement public", "Financement", "MAD", "5 M - 50 M", "Actif", "4 garanties"],
+    ["Garantie", "Garantie", "MAD", "1 M - 10 M", "Actif", "2 conditions"],
+  ];
+
+  const covenants = [
+    ["PAR30 < 5%", "IMF", "Critique", "Actif", "24 clients"],
+    ["DSCR > 1,2x", "TPME", "Majeur", "Actif", "18 clients"],
+    ["Solvabilité > 15%", "IMF", "Moyen", "En pause", "6 clients"],
+  ];
+
+  const alerts = [
+    ["PAR30 dépassé", "Alerte métier", "Majeure", "Notification + tâche", "Actif"],
+    ["Soumission retardée", "Opérationnelle", "Moyenne", "Escalade 5 jours", "Actif"],
+    ["Document expiré", "Contrat", "Faible", "Demande de mise à jour", "Actif"],
+  ];
+
+  const renderSection = () => {
+    switch (section) {
+      case "counterparties":
+        return (
+          <Panel>
+            <PanelTitle
+              title="Types de contreparties"
+              subtitle="Configuration des profils métier et des champs applicables"
+            />
+            <div className="overflow-x-auto p-5">
+              <table className="w-full min-w-[760px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/40 text-[11px] uppercase text-muted-foreground">
+                    <th className="px-4 py-3">Type</th>
+                    <th className="px-4 py-3">Description</th>
+                    <th className="px-4 py-3">Statut</th>
+                    <th className="px-4 py-3">Champs</th>
+                    <th className="px-4 py-3">Méthodes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {counterparties.map(([name, desc, status, fields, methods]) => (
+                    <tr key={name} className="hover:bg-muted/40">
+                      <td className="px-4 py-4 font-semibold">{name}</td>
+                      <td className="px-4 py-4 text-muted-foreground">{desc}</td>
+                      <td className="px-4 py-4">
+                        <Status tone={status === "Actif" ? "success" : "neutral"}>{status}</Status>
+                      </td>
+                      <td className="px-4 py-4">{fields}</td>
+                      <td className="px-4 py-4">{methods}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Panel>
+        );
+      case "dictionary":
+        return (
+          <Panel>
+            <PanelTitle
+              title="Dictionnaire des données"
+              subtitle="Registre central des champs métier et des règles de validation"
+            />
+            <div className="overflow-x-auto p-5">
+              <table className="w-full min-w-[780px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/40 text-[11px] uppercase text-muted-foreground">
+                    <th className="px-4 py-3">Champ</th>
+                    <th className="px-4 py-3">Catégorie</th>
+                    <th className="px-4 py-3">Type</th>
+                    <th className="px-4 py-3">Unité</th>
+                    <th className="px-4 py-3">Contrepartie</th>
+                    <th className="px-4 py-3">Obligatoire</th>
+                    <th className="px-4 py-3">Statut</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {dictionary.map(
+                    ([field, category, type, unit, counterparty, required, status]) => (
+                      <tr key={field} className="hover:bg-muted/40">
+                        <td className="px-4 py-4 font-semibold">{field}</td>
+                        <td className="px-4 py-4">{category}</td>
+                        <td className="px-4 py-4">{type}</td>
+                        <td className="px-4 py-4">{unit}</td>
+                        <td className="px-4 py-4">{counterparty}</td>
+                        <td className="px-4 py-4">{required}</td>
+                        <td className="px-4 py-4">
+                          <Status tone={status === "Actif" ? "success" : "warning"}>
+                            {status}
+                          </Status>
+                        </td>
+                      </tr>
+                    ),
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Panel>
+        );
+      case "templates":
+        return (
+          <Panel>
+            <PanelTitle
+              title="Modèles de collecte"
+              subtitle="Paquets de données requêtés selon le type de contrepartie et la période"
+            />
+            <div className="grid gap-4 p-5 md:grid-cols-2">
+              {[
+                ["Package trimestriel IMF", "48 champs", "12 requis", "4 documents", "Actif"],
+                ["Package TPME", "36 champs", "10 requis", "2 documents", "Actif"],
+                ["Package banque", "42 champs", "14 requis", "5 documents", "Brouillon"],
+              ].map(([name, fields, required, docs, status]) => (
+                <div key={name} className="rounded-md border border-border p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="font-semibold">{name}</h3>
+                    <Status tone={status === "Actif" ? "success" : "warning"}>{status}</Status>
+                  </div>
+                  <div className="mt-4 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
+                    <div>
+                      <p>Champs</p>
+                      <p className="mt-1 font-semibold text-foreground">{fields}</p>
+                    </div>
+                    <div>
+                      <p>Requis</p>
+                      <p className="mt-1 font-semibold text-foreground">{required}</p>
+                    </div>
+                    <div>
+                      <p>Docs</p>
+                      <p className="mt-1 font-semibold text-foreground">{docs}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Panel>
+        );
+      case "metrics":
+        return (
+          <Panel>
+            <PanelTitle
+              title="Indicateurs & ratios"
+              subtitle="Bibliothèque centralisée des mesures financières et de performance"
+            />
+            <div className="overflow-x-auto p-5">
+              <table className="w-full min-w-[760px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/40 text-[11px] uppercase text-muted-foreground">
+                    <th className="px-4 py-3">Indicateur</th>
+                    <th className="px-4 py-3">Catégorie</th>
+                    <th className="px-4 py-3">Type</th>
+                    <th className="px-4 py-3">Formule</th>
+                    <th className="px-4 py-3">Statut</th>
+                    <th className="px-4 py-3">Utilisation</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {metrics.map(([name, category, type, formula, status, usage]) => (
+                    <tr key={name} className="hover:bg-muted/40">
+                      <td className="px-4 py-4 font-semibold">{name}</td>
+                      <td className="px-4 py-4">{category}</td>
+                      <td className="px-4 py-4">{type}</td>
+                      <td className="px-4 py-4 text-muted-foreground">{formula}</td>
+                      <td className="px-4 py-4">
+                        <Status tone={status === "Actif" ? "success" : "warning"}>{status}</Status>
+                      </td>
+                      <td className="px-4 py-4">{usage}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Panel>
+        );
+      case "questionnaires":
+        return (
+          <Panel>
+            <PanelTitle
+              title="Questionnaires"
+              subtitle="Blocs de questions utilisés lors de l’évaluation et du suivi"
+            />
+            <div className="overflow-x-auto p-5">
+              <table className="w-full min-w-[720px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/40 text-[11px] uppercase text-muted-foreground">
+                    <th className="px-4 py-3">Questionnaire</th>
+                    <th className="px-4 py-3">Type</th>
+                    <th className="px-4 py-3">Sections</th>
+                    <th className="px-4 py-3">Questions</th>
+                    <th className="px-4 py-3">Statut</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {questionnaires.map(([name, type, sections, questions, status]) => (
+                    <tr key={name} className="hover:bg-muted/40">
+                      <td className="px-4 py-4 font-semibold">{name}</td>
+                      <td className="px-4 py-4">{type}</td>
+                      <td className="px-4 py-4">{sections}</td>
+                      <td className="px-4 py-4">{questions}</td>
+                      <td className="px-4 py-4">
+                        <Status tone={status === "Actif" ? "success" : "warning"}>{status}</Status>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Panel>
+        );
+      case "methodologies":
+        return (
+          <Panel>
+            <PanelTitle
+              title="Méthodologies d’évaluation"
+              subtitle="Structure des dimensions, critères, règles et notation"
+            />
+            <div className="overflow-x-auto p-5">
+              <table className="w-full min-w-[720px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/40 text-[11px] uppercase text-muted-foreground">
+                    <th className="px-4 py-3">Méthode</th>
+                    <th className="px-4 py-3">Type</th>
+                    <th className="px-4 py-3">Statut</th>
+                    <th className="px-4 py-3">Validité</th>
+                    <th className="px-4 py-3">Dimensions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {methodologies.map(([name, type, status, validity, dimensions]) => (
+                    <tr key={name} className="hover:bg-muted/40">
+                      <td className="px-4 py-4 font-semibold">{name}</td>
+                      <td className="px-4 py-4">{type}</td>
+                      <td className="px-4 py-4">
+                        <Status tone={status === "Actif" ? "success" : "warning"}>{status}</Status>
+                      </td>
+                      <td className="px-4 py-4">{validity}</td>
+                      <td className="px-4 py-4">{dimensions}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Panel>
+        );
+      case "products":
+        return (
+          <Panel>
+            <PanelTitle
+              title="Produits de financement"
+              subtitle="Catalogue de produits utilisables par les institutions"
+            />
+            <div className="overflow-x-auto p-5">
+              <table className="w-full min-w-[760px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/40 text-[11px] uppercase text-muted-foreground">
+                    <th className="px-4 py-3">Produit</th>
+                    <th className="px-4 py-3">Type</th>
+                    <th className="px-4 py-3">Devise</th>
+                    <th className="px-4 py-3">Plage</th>
+                    <th className="px-4 py-3">Statut</th>
+                    <th className="px-4 py-3">Règles</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {financingProducts.map(([name, type, currency, range, status, rules]) => (
+                    <tr key={name} className="hover:bg-muted/40">
+                      <td className="px-4 py-4 font-semibold">{name}</td>
+                      <td className="px-4 py-4">{type}</td>
+                      <td className="px-4 py-4">{currency}</td>
+                      <td className="px-4 py-4">{range}</td>
+                      <td className="px-4 py-4">
+                        <Status tone={status === "Actif" ? "success" : "warning"}>{status}</Status>
+                      </td>
+                      <td className="px-4 py-4">{rules}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Panel>
+        );
+      case "covenants":
+        return (
+          <Panel>
+            <PanelTitle
+              title="Covenants"
+              subtitle="Conditions contractuelles et seuils à surveiller pendant la relation"
+            />
+            <div className="overflow-x-auto p-5">
+              <table className="w-full min-w-[720px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/40 text-[11px] uppercase text-muted-foreground">
+                    <th className="px-4 py-3">Covenant</th>
+                    <th className="px-4 py-3">Type</th>
+                    <th className="px-4 py-3">Sévérité</th>
+                    <th className="px-4 py-3">Statut</th>
+                    <th className="px-4 py-3">Clients</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {covenants.map(([name, type, severity, status, clients]) => (
+                    <tr key={name} className="hover:bg-muted/40">
+                      <td className="px-4 py-4 font-semibold">{name}</td>
+                      <td className="px-4 py-4">{type}</td>
+                      <td className="px-4 py-4">
+                        <Status
+                          tone={
+                            severity === "Critique"
+                              ? "danger"
+                              : severity === "Majeur"
+                                ? "warning"
+                                : "info"
+                          }
+                        >
+                          {severity}
+                        </Status>
+                      </td>
+                      <td className="px-4 py-4">
+                        <Status tone={status === "Actif" ? "success" : "neutral"}>{status}</Status>
+                      </td>
+                      <td className="px-4 py-4">{clients}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Panel>
+        );
+      case "alerts":
+        return (
+          <Panel>
+            <PanelTitle
+              title="Alertes & actions"
+              subtitle="Règles de déclenchement et mécanismes d’escalade"
+            />
+            <div className="overflow-x-auto p-5">
+              <table className="w-full min-w-[760px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/40 text-[11px] uppercase text-muted-foreground">
+                    <th className="px-4 py-3">Alerte</th>
+                    <th className="px-4 py-3">Type</th>
+                    <th className="px-4 py-3">Sévérité</th>
+                    <th className="px-4 py-3">Action</th>
+                    <th className="px-4 py-3">Statut</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {alerts.map(([name, type, severity, action, status]) => (
+                    <tr key={name} className="hover:bg-muted/40">
+                      <td className="px-4 py-4 font-semibold">{name}</td>
+                      <td className="px-4 py-4">{type}</td>
+                      <td className="px-4 py-4">
+                        <Status
+                          tone={
+                            severity === "Majeure"
+                              ? "danger"
+                              : severity === "Moyenne"
+                                ? "warning"
+                                : "info"
+                          }
+                        >
+                          {severity}
+                        </Status>
+                      </td>
+                      <td className="px-4 py-4 text-muted-foreground">{action}</td>
+                      <td className="px-4 py-4">
+                        <Status tone={status === "Actif" ? "success" : "neutral"}>{status}</Status>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Panel>
+        );
+      default:
+        return (
+          <>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {summaryCards.map(([label, value, detail, tone]) => (
+                <Metric
+                  key={label}
+                  label={label ?? ""}
+                  value={value ?? ""}
+                  detail={detail ?? ""}
+                  tone={tone as Tone}
+                  icon={Gauge}
+                />
+              ))}
+            </div>
+
+            <div className="mt-5 grid gap-5 xl:grid-cols-[1.35fr_0.95fr]">
+              <Panel>
+                <PanelTitle
+                  title="Santé de la configuration"
+                  subtitle="État général des paramètres et dépendances"
+                />
+                <div className="grid gap-4 p-5 md:grid-cols-2">
+                  <div className="rounded-md border border-border p-4">
+                    <p className="text-xs uppercase text-muted-foreground">
+                      Configuration complète
+                    </p>
+                    <p className="mt-2 text-3xl font-bold">96%</p>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      3 indicateurs avec validation en attente
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-border p-4">
+                    <p className="text-xs uppercase text-muted-foreground">Méthodes non validées</p>
+                    <p className="mt-2 text-3xl font-bold">3</p>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      1 méthode manque des références obligatoires
+                    </p>
+                  </div>
+                </div>
+              </Panel>
+
+              <Panel>
+                <PanelTitle
+                  title="Modifications récentes"
+                  subtitle="Derniers changements de configuration"
+                />
+                <div className="space-y-3 p-5">
+                  {[
+                    ["PAR30 : seuil mis à jour", "Risque IMF"],
+                    ["Nouvelle méthode TPME créée", "Équipe de risque"],
+                    ["Modèle de reporting Q3 ajouté", "Reporting"],
+                    ["Nouvel alert covenants activé", "Monitoring"],
+                  ].map(([label, detail]) => (
+                    <div key={label} className="rounded-md border border-border p-3">
+                      <p className="text-sm font-medium">{label}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
+                    </div>
+                  ))}
+                </div>
+              </Panel>
+            </div>
+
+            <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_1fr]">
+              <Panel>
+                <PanelTitle
+                  title="Impact & dépendances"
+                  subtitle="Effets potentiels d’un changement de configuration"
+                />
+                <div className="space-y-3 p-5">
+                  {[
+                    ["PAR30", "Utilisé dans 2 méthodologies, 3 covenants et 1 benchmark"],
+                    ["Méthode IMF 2026", "Impact sur 6 règles d’évaluation et 14 alarmes"],
+                    [
+                      "Produit de financement",
+                      "Affecte l’éligibilité sur 3 types de contreparties",
+                    ],
+                  ].map(([label, detail]) => (
+                    <div key={label} className="rounded-md border border-border p-3">
+                      <p className="text-sm font-semibold">{label}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
+                    </div>
+                  ))}
+                </div>
+              </Panel>
+
+              <Panel>
+                <PanelTitle
+                  title="Exemple de configuration"
+                  subtitle="Mise en cohérence entre référentiels et opérations"
+                />
+                <div className="space-y-4 p-5">
+                  <div className="rounded-md border border-border p-3">
+                    <p className="text-sm font-semibold">Institution A — IMF</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Méthode : IMF Financial Risk · Indicateurs : PAR30, ROA, solvabilité
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-border p-3">
+                    <p className="text-sm font-semibold">Institution B — TPME</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Méthode : SME Credit Risk · Indicateurs : DSCR, EBITDA, endettement
+                    </p>
+                  </div>
+                </div>
+              </Panel>
+            </div>
+          </>
+        );
+    }
+  };
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Administration"
+        title="Configuration du système"
+        description="Définir les référentiels, règles de monitoring et méthodologies applicables à l’institution."
+        action={
+          <Button>
+            <Plus /> Nouveau paramètre
+          </Button>
+        }
+      />
+
+      <div className="mb-6 border-b border-border">
+        <nav className="flex flex-wrap gap-2">
+          {sections.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setSection(item.id)}
+              className={cn(
+                "rounded-t-md border-b-2 px-3 py-2 text-sm transition",
+                section === item.id
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {item.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {renderSection()}
     </>
   );
 }
@@ -2116,7 +2826,7 @@ export function FinancialWorkspace() {
                 SE
               </span>
               <span className="text-left">
-                <span className="block text-xs font-semibold">Samira El Amrani</span>
+                <span className="block text-xs font-semibold">Mr. Amine Caciopee</span>
                 <span className="block text-[10px] text-muted-foreground">Analyste risques</span>
               </span>
               <ChevronDown className="size-3 text-muted-foreground" />
@@ -2140,8 +2850,10 @@ export function FinancialWorkspace() {
             <Alerts />
           ) : view === "comparaison" ? (
             <Comparison />
-          ) : (
+          ) : view === "rapports" ? (
             <Reports />
+          ) : (
+            <ConfigurationWorkspace />
           )}
         </main>
       </div>
