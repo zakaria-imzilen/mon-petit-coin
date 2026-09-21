@@ -66,6 +66,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 type View =
@@ -81,7 +82,7 @@ type View =
   | "configuration";
 type Tone = "neutral" | "success" | "warning" | "danger" | "info";
 type ClientTab =
-  "overview" | "performance" | "periods" | "financing" | "covenants" | "documents" | "history";
+  "overview" | "performance" | "periods" | "financing" | "alerts" | "documents" | "history";
 type ConfigSection =
   | "counterparties"
   | "dictionary"
@@ -90,7 +91,6 @@ type ConfigSection =
   | "questionnaires"
   | "methodologies"
   | "products"
-  | "covenants"
   | "alerts";
 
 const dossiers = [
@@ -102,7 +102,7 @@ const dossiers = [
     stage: "Analyse",
     risk: "B+",
     progress: 72,
-    update: "Aujourd’hui, 09:42",
+    update: "Aujourd'hui, 09:42",
     owner: "Caciopee",
     tone: "warning" as Tone,
   },
@@ -199,7 +199,7 @@ const nav: { group?: string; items: { id: View; label: string; icon: LucideIcon 
     items: [
       { id: "portfolio", label: "Suivi du portefeuille", icon: Activity },
       { id: "collecte", label: "Collecte des données", icon: Inbox },
-      { id: "alertes", label: "Alertes et covenants", icon: ShieldAlert },
+      { id: "alertes", label: "Alertes", icon: ShieldAlert },
     ],
   },
   {
@@ -392,8 +392,8 @@ function Dashboard({ go }: { go: (v: View) => void }) {
           <div className="divide-y divide-border">
             {[
               ["6", "Dossiers à compléter", "Informations ou pièces manquantes", "warning"],
-              ["4", "Prêts pour l’analyse", "Données validées et questionnaire terminé", "info"],
-              ["3", "En attente d’avis", "Relance requise auprès des contributeurs", "neutral"],
+              ["4", "Prêts pour l'analyse", "Données validées et questionnaire terminé", "info"],
+              ["3", "En attente d'avis", "Relance requise auprès des contributeurs", "neutral"],
               ["2", "En attente de décision", "Synthèse et avis disponibles", "success"],
             ].map(([n, l, d, t]) => (
               <button
@@ -453,7 +453,7 @@ function Dashboard({ go }: { go: (v: View) => void }) {
             title="Alertes prioritaires"
             action={
               <Button variant="ghost" size="sm" onClick={() => go("alertes")}>
-                Centre d’alertes <ArrowRight />
+                Centre d'alertes <ArrowRight />
               </Button>
             }
           />
@@ -510,7 +510,7 @@ function Dossiers({ open }: { open: () => void }) {
       <PageHeader
         eyebrow="Due diligence"
         title="Dossiers"
-        description="Pilotez les analyses en cours, de la collecte jusqu’à la décision."
+        description="Pilotez les analyses en cours, de la collecte jusqu'à la décision."
         action={
           <Button onClick={open}>
             <Plus /> Nouveau dossier
@@ -689,7 +689,7 @@ function Dossier({ back }: { back: () => void }) {
           </div>
           <Progress value={72} />
           <p className="mt-2 text-right text-[11px] text-muted-foreground">
-            Mis à jour aujourd’hui à 09:42
+            Mis à jour aujourd'hui à 09:42
           </p>
         </div>
       </div>
@@ -888,7 +888,7 @@ function Information() {
             {[
               ["États financiers 2025", "Disponible", "success"],
               ["Documents juridiques", "Disponible", "success"],
-              ["Rapport d’audit", "Manquant", "danger"],
+              ["Rapport d'audit", "Manquant", "danger"],
             ].map(([a, b, t]) => (
               <div
                 className="flex items-center justify-between rounded-md border border-border p-3"
@@ -948,7 +948,7 @@ function FinancialData() {
         <div className="mt-4 rounded-md border border-destructive/25 bg-danger-soft p-4 text-sm">
           <strong>Erreur de rapprochement</strong>
           <p className="mt-1 text-xs text-muted-foreground">
-            Le total de l’actif ne correspond pas au passif + capitaux propres.
+            Le total de l'actif ne correspond pas au passif + capitaux propres.
           </p>
         </div>
       </div>
@@ -959,7 +959,7 @@ function Questionnaire() {
   return (
     <Panel>
       <PanelTitle
-        title="Questionnaire d’évaluation"
+        title="Questionnaire d'évaluation"
         subtitle="24 réponses sur 28 · 3 questions obligatoires sans réponse"
       />
       <div className="divide-y divide-border">
@@ -1198,13 +1198,6 @@ function Portfolio({ open }: { open: () => void }) {
           icon={TrendingDown}
           tone="warning"
         />
-        <Metric
-          label="Covenants rompus"
-          value="5"
-          detail="3 clients concernés"
-          icon={ShieldAlert}
-          tone="danger"
-        />
       </div>
       <Panel className="mt-5">
         <PanelTitle
@@ -1268,14 +1261,14 @@ function ClientWorkspace({ back }: { back: () => void }) {
     { id: "performance", label: "Financial Performance" },
     { id: "periods", label: "Reporting Periods" },
     { id: "financing", label: "Financing" },
-    { id: "covenants", label: "Covenants & Alerts" },
+    { id: "alerts", label: "Alerts" },
     { id: "documents", label: "Documents" },
     { id: "history", label: "History" },
   ].filter((item) => {
     if (
       item.id === "overview" ||
       item.id === "financing" ||
-      item.id === "covenants" ||
+      item.id === "alerts" ||
       item.id === "history"
     )
       return true;
@@ -1308,6 +1301,14 @@ function ClientWorkspace({ back }: { back: () => void }) {
     ["Q3 2025", "14/10/2025", "88%", "Needs update", "danger"],
   ];
 
+  const periodRatioComparison = [
+    ["PAR30", "5,8 %", "4,1 %", "+1,7 pts", "Détérioration", "danger"],
+    ["ROA", "4,2 %", "3,9 %", "+0,3 pt", "Amélioration", "success"],
+    ["Ratio de solvabilité", "18,5 %", "18,1 %", "+0,4 pt", "Amélioration", "success"],
+    ["Liquidité immédiate", "22,8 %", "24,4 %", "−1,6 pt", "Diminution", "warning"],
+    ["Marge nette", "14,7 %", "13,9 %", "+0,8 pt", "Amélioration", "success"],
+  ];
+
   const financings = [
     {
       name: "Financing #002",
@@ -1336,12 +1337,6 @@ function ClientWorkspace({ back }: { back: () => void }) {
       status: "Available",
       maturity: "12 mars 2027",
     },
-  ];
-
-  const covenants = [
-    ["PAR30", "5,8 %", "< 5,0 %", "Breach", "danger"],
-    ["Solvability", "18,5 %", "> 15,0 %", "OK", "success"],
-    ["DSCR", "1,08x", "> 1,20x", "Warning", "warning"],
   ];
 
   const docs = [
@@ -1393,7 +1388,7 @@ function ClientWorkspace({ back }: { back: () => void }) {
           <Button variant="outline">
             <FileText /> Télécharger document
           </Button>
-          <Button variant="outline" size="icon" aria-label="Plus d’actions">
+          <Button variant="outline" size="icon" aria-label="Plus d'actions">
             <MoreHorizontal />
           </Button>
         </div>
@@ -1720,44 +1715,80 @@ function ClientWorkspace({ back }: { back: () => void }) {
         )}
 
         {tab === "periods" && (
-          <Panel>
-            <PanelTitle
-              title="Reporting Periods"
-              subtitle="Financial package submissions and validation history"
-            />
-            <div className="overflow-x-auto p-5">
-              <table className="w-full min-w-[760px] text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border text-xs uppercase text-muted-foreground">
-                    <th className="pb-3 pr-4">Period</th>
-                    <th className="pb-3 pr-4">Submission</th>
-                    <th className="pb-3 pr-4">Completeness</th>
-                    <th className="pb-3 pr-4">Validation</th>
-                    <th className="pb-3 pr-4">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {periods.map(([period, date, completeness, validation, tone]) => (
-                    <tr key={period}>
-                      <td className="py-3 pr-4 font-semibold">{period}</td>
-                      <td className="py-3 pr-4">{date}</td>
-                      <td className="py-3 pr-4">{completeness}</td>
-                      <td className="py-3 pr-4">{validation}</td>
-                      <td className="py-3 pr-4">
-                        <Status tone={tone as Tone}>
-                          {tone === "success"
-                            ? "Validated"
-                            : tone === "warning"
-                              ? "Review"
-                              : "Urgent"}
-                        </Status>
-                      </td>
+          <>
+            <Panel>
+              <PanelTitle
+                title="Reporting Periods"
+                subtitle="Financial package submissions and validation history"
+              />
+              <div className="overflow-x-auto p-5">
+                <table className="w-full min-w-[760px] text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-xs uppercase text-muted-foreground">
+                      <th className="pb-3 pr-4">Period</th>
+                      <th className="pb-3 pr-4">Submission</th>
+                      <th className="pb-3 pr-4">Completeness</th>
+                      <th className="pb-3 pr-4">Validation</th>
+                      <th className="pb-3 pr-4">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Panel>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {periods.map(([period, date, completeness, validation, tone]) => (
+                      <tr key={period}>
+                        <td className="py-3 pr-4 font-semibold">{period}</td>
+                        <td className="py-3 pr-4">{date}</td>
+                        <td className="py-3 pr-4">{completeness}</td>
+                        <td className="py-3 pr-4">{validation}</td>
+                        <td className="py-3 pr-4">
+                          <Status tone={tone as Tone}>
+                            {tone === "success"
+                              ? "Validated"
+                              : tone === "warning"
+                                ? "Review"
+                                : "Urgent"}
+                          </Status>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Panel>
+            <Panel>
+              <PanelTitle
+                title="Comparaison des ratios financiers"
+                subtitle="Évolution entre Q2 2026 et Q1 2026"
+              />
+              <div className="overflow-x-auto p-5">
+                <table className="w-full min-w-[760px] text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-xs uppercase text-muted-foreground">
+                      <th className="pb-3 pr-4">Ratio</th>
+                      <th className="pb-3 pr-4">Q2 2026</th>
+                      <th className="pb-3 pr-4">Q1 2026</th>
+                      <th className="pb-3 pr-4">Variation</th>
+                      <th className="pb-3 pr-4">Tendance</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {periodRatioComparison.map(
+                      ([ratio, current, previous, variation, trend, tone]) => (
+                        <tr key={ratio}>
+                          <td className="py-3 pr-4 font-semibold">{ratio}</td>
+                          <td className="py-3 pr-4 font-semibold">{current}</td>
+                          <td className="py-3 pr-4 text-muted-foreground">{previous}</td>
+                          <td className="py-3 pr-4">{variation}</td>
+                          <td className="py-3 pr-4">
+                            <Status tone={tone as Tone}>{trend}</Status>
+                          </td>
+                        </tr>
+                      ),
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </Panel>
+          </>
         )}
 
         {tab === "financing" && (
@@ -1826,73 +1857,6 @@ function ClientWorkspace({ back }: { back: () => void }) {
               </Panel>
             </div>
           </>
-        )}
-
-        {tab === "covenants" && (
-          <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
-            <Panel>
-              <PanelTitle
-                title="Active Covenants"
-                subtitle="Current thresholds and monitoring status"
-              />
-              <div className="overflow-x-auto p-5">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-xs uppercase text-muted-foreground">
-                      <th className="pb-3 pr-4">Covenant</th>
-                      <th className="pb-3 pr-4">Current</th>
-                      <th className="pb-3 pr-4">Threshold</th>
-                      <th className="pb-3 pr-4">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {covenants.map(([name, current, threshold, status, tone]) => (
-                      <tr key={name}>
-                        <td className="py-3 pr-4 font-medium">{name}</td>
-                        <td className="py-3 pr-4">{current}</td>
-                        <td className="py-3 pr-4">{threshold}</td>
-                        <td className="py-3 pr-4">
-                          <Status tone={tone as Tone}>{status}</Status>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Panel>
-
-            <Panel>
-              <PanelTitle title="Alerts" subtitle="Lifecycle from detection to resolution" />
-              <div className="space-y-3 p-5">
-                {[
-                  [
-                    "PAR30 covenant breach",
-                    "Critical",
-                    "5,8% > 5,0%",
-                    "Detected 18/09/2026",
-                    "danger",
-                  ],
-                  [
-                    "Data missing",
-                    "Medium",
-                    "3 required fields",
-                    "Acknowledged 16/09/2026",
-                    "warning",
-                  ],
-                  ["Board document review", "Low", "Minutes to validate", "In progress", "info"],
-                ].map(([label, severity, metric, date, tone]) => (
-                  <div key={label} className="rounded-md border border-border p-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-semibold">{label}</p>
-                      <Status tone={tone as Tone}>{severity}</Status>
-                    </div>
-                    <p className="mt-2 text-xs text-muted-foreground">{metric}</p>
-                    <p className="mt-2 text-[11px] text-muted-foreground">{date}</p>
-                  </div>
-                ))}
-              </div>
-            </Panel>
-          </div>
         )}
 
         {tab === "documents" && (
@@ -2019,7 +1983,7 @@ function AttributeProfileEditor() {
   return (
     <Panel>
       <PanelTitle
-        title="Modèles de données"
+        title="Modèles de données financières"
         subtitle="Activez les attributs de la bibliothèque globale pour chaque profil de contrepartie"
       />
       <div className="flex flex-col gap-4 border-b border-border p-5 md:flex-row md:items-end md:justify-between">
@@ -2082,109 +2046,490 @@ function AttributeProfileEditor() {
   );
 }
 
+type FormulaLeaf = {
+  id: string;
+  kind: "leaf";
+  model: string;
+  attribute: string;
+};
+type FormulaConstant = { id: string; kind: "constant"; value: string };
+type FormulaGroup = {
+  id: string;
+  kind: "group";
+  children: { operator: string; expression: FormulaExpression }[];
+};
+type FormulaExpression = FormulaLeaf | FormulaConstant | FormulaGroup;
+
+const formulaId = () => `formula-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const newFormulaLeaf = (): FormulaLeaf => ({
+  id: formulaId(),
+  kind: "leaf",
+  model: "Bilan",
+  attribute: "Dettes",
+});
+const newFormulaConstant = (): FormulaConstant => ({
+  id: formulaId(),
+  kind: "constant",
+  value: "1",
+});
+const newFormulaGroup = (): FormulaGroup => ({
+  id: formulaId(),
+  kind: "group",
+  children: [{ operator: "+", expression: newFormulaLeaf() }],
+});
+
+function formulaLabel(expression: FormulaExpression): string {
+  if (expression.kind === "leaf") return `${expression.model}.${expression.attribute}`;
+  if (expression.kind === "constant") return expression.value || "0";
+  return `(${expression.children
+    .map((child) => `${child.operator} ${formulaLabel(child.expression)}`)
+    .join(" ")
+    .replace(/^\+ /, "")})`;
+}
+
+function updateFormulaExpression(
+  expression: FormulaExpression,
+  id: string,
+  update: (current: FormulaExpression) => FormulaExpression,
+): FormulaExpression {
+  if (expression.id === id) return update(expression);
+  if (expression.kind !== "group") return expression;
+  return {
+    ...expression,
+    children: expression.children.map((child) => ({
+      ...child,
+      expression: updateFormulaExpression(child.expression, id, update),
+    })),
+  };
+}
+
 function FormulaBuilder() {
-  const [blocks, setBlocks] = useState([
-    { model: "Bilan", attribute: "Dettes", operator: "/" },
-    { model: "Compte de résultat", attribute: "Résultat net", operator: "+" },
-  ]);
-  const updateBlock = (index: number, key: "model" | "attribute" | "operator", value: string) =>
-    setBlocks((current) =>
-      current.map((block, blockIndex) =>
-        blockIndex === index ? { ...block, [key]: value } : block,
-      ),
+  const [ratioName, setRatioName] = useState("Ratio d'endettement");
+  const [profile, setProfile] = useState("IMF");
+  const [formula, setFormula] = useState<FormulaGroup>(() => ({
+    id: formulaId(),
+    kind: "group",
+    children: [
+      { operator: "+", expression: newFormulaLeaf() },
+      {
+        operator: "/",
+        expression: {
+          ...newFormulaGroup(),
+          children: [
+            { operator: "+", expression: { ...newFormulaLeaf(), attribute: "Actifs" } },
+            { operator: "-", expression: { ...newFormulaLeaf(), attribute: "Trésorerie" } },
+          ],
+        },
+      },
+    ],
+  }));
+
+  const updateExpression = (
+    id: string,
+    update: (current: FormulaExpression) => FormulaExpression,
+  ) => setFormula((current) => updateFormulaExpression(current, id, update) as FormulaGroup);
+  const appendChild = (groupId: string, expression: FormulaExpression) =>
+    updateExpression(groupId, (current) =>
+      current.kind === "group"
+        ? { ...current, children: [...current.children, { operator: "+", expression }] }
+        : current,
     );
+  const removeChild = (groupId: string, childId: string) =>
+    updateExpression(groupId, (current) =>
+      current.kind === "group" && current.children.length > 1
+        ? {
+            ...current,
+            children: current.children.filter((child) => child.expression.id !== childId),
+          }
+        : current,
+    );
+
+  const renderExpression = (expression: FormulaExpression, parentGroupId?: string) => {
+    if (expression.kind === "group") {
+      return (
+        <div className="space-y-3 rounded-md border border-primary/25 bg-primary/[0.03] p-3">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs font-bold text-primary">Groupe imbriqué</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => parentGroupId && removeChild(parentGroupId, expression.id)}
+              disabled={!parentGroupId}
+              aria-label="Supprimer le groupe"
+            >
+              <Trash2 />
+            </Button>
+          </div>
+          {expression.children.map((child, index) => (
+            <div key={child.expression.id} className="space-y-2">
+              <div className="flex items-end gap-2">
+                <div className="w-24 shrink-0 text-xs font-semibold">
+                  {index === 0 ? (
+                    <span className="inline-flex h-9 items-center rounded bg-secondary px-2">
+                      Début
+                    </span>
+                  ) : (
+                    <ConfigSelect
+                      value={child.operator}
+                      onValueChange={(value) =>
+                        updateExpression(expression.id, (current) =>
+                          current.kind === "group"
+                            ? {
+                                ...current,
+                                children: current.children.map((currentChild) =>
+                                  currentChild.expression.id === child.expression.id
+                                    ? { ...currentChild, operator: value }
+                                    : currentChild,
+                                ),
+                              }
+                            : current,
+                        )
+                      }
+                    >
+                      <SelectItem value="+">+</SelectItem>
+                      <SelectItem value="-">−</SelectItem>
+                      <SelectItem value="*">×</SelectItem>
+                      <SelectItem value="/">÷</SelectItem>
+                    </ConfigSelect>
+                  )}
+                </div>
+                {renderExpression(child.expression, expression.id)}
+              </div>
+            </div>
+          ))}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => appendChild(expression.id, newFormulaLeaf())}
+            >
+              <Plus /> Champ
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => appendChild(expression.id, newFormulaConstant())}
+            >
+              <Plus /> Constante
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => appendChild(expression.id, newFormulaGroup())}
+            >
+              <Plus /> Groupe
+            </Button>
+          </div>
+        </div>
+      );
+    }
+    if (expression.kind === "constant")
+      return (
+        <label className="block min-w-32 flex-1 text-xs font-semibold">
+          Constante
+          <Input
+            className="mt-1"
+            value={expression.value}
+            onChange={(event) =>
+              updateExpression(expression.id, (current) =>
+                current.kind === "constant" ? { ...current, value: event.target.value } : current,
+              )
+            }
+          />
+        </label>
+      );
+    return (
+      <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2">
+        <label className="text-xs font-semibold">
+          Modèle
+          <ConfigSelect
+            value={expression.model}
+            onValueChange={(value) =>
+              updateExpression(expression.id, (current) =>
+                current.kind === "leaf" ? { ...current, model: value } : current,
+              )
+            }
+          >
+            <SelectItem value="Bilan">Bilan</SelectItem>
+            <SelectItem value="Compte de résultat">Compte de résultat</SelectItem>
+            <SelectItem value="Données métier">Données métier</SelectItem>
+          </ConfigSelect>
+        </label>
+        <label className="text-xs font-semibold">
+          Attribut
+          <ConfigSelect
+            value={expression.attribute}
+            onValueChange={(value) =>
+              updateExpression(expression.id, (current) =>
+                current.kind === "leaf" ? { ...current, attribute: value } : current,
+              )
+            }
+          >
+            <SelectItem value="Dettes">Dettes</SelectItem>
+            <SelectItem value="Résultat net">Résultat net</SelectItem>
+            <SelectItem value="Actifs">Actifs</SelectItem>
+            <SelectItem value="Trésorerie">Trésorerie</SelectItem>
+            <SelectItem value="Portefeuille">Portefeuille</SelectItem>
+          </ConfigSelect>
+        </label>
+      </div>
+    );
+  };
 
   return (
     <Panel>
       <PanelTitle
-        title="Indicateurs & éditeur de formules"
-        subtitle="Construisez un ratio avec les modèles et attributs disponibles"
+        title="Ratios financiers · Formula Builder"
+        subtitle="Créez des formules avec opérations, constantes et groupes imbriqués"
         action={
-          <Button size="sm">
-            <Plus /> Nouvel indicateur
+          <Button size="sm" onClick={() => setFormula(newFormulaGroup())}>
+            <Plus /> Nouveau ratio
           </Button>
         }
       />
-      <div className="space-y-4 p-5">
-        <div className="rounded-md bg-muted/45 p-4 text-sm">
-          <span className="font-semibold">Aperçu : </span>
-          {blocks.map((block, index) => (
-            <span key={index}>
-              {index > 0 && ` ${block.operator} `}
-              <span className="font-semibold text-primary">{block.attribute}</span>
-            </span>
-          ))}
+      <div className="space-y-5 p-5">
+        <div className="grid gap-3 md:grid-cols-[1fr_220px]">
+          <label className="text-xs font-semibold">
+            Nom du ratio
+            <Input
+              className="mt-2"
+              value={ratioName}
+              onChange={(event) => setRatioName(event.target.value)}
+            />
+          </label>
+          <label className="text-xs font-semibold">
+            Profil de contrepartie
+            <div className="mt-2">
+              <ConfigSelect value={profile} onValueChange={setProfile}>
+                <SelectItem value="IMF">IMF</SelectItem>
+                <SelectItem value="TPME">TPME</SelectItem>
+                <SelectItem value="BANQUE">Banque</SelectItem>
+              </ConfigSelect>
+            </div>
+          </label>
         </div>
-        {blocks.map((block, index) => (
-          <div
-            key={index}
-            className="grid gap-3 rounded-md border border-border p-4 md:grid-cols-[1fr_1fr_120px_auto] md:items-end"
-          >
-            <label className="text-xs font-semibold">
-              Modèle
-              <div className="mt-2">
-                <ConfigSelect
-                  value={block.model}
-                  onValueChange={(value) => updateBlock(index, "model", value)}
+        <div className="rounded-md bg-muted/45 p-4">
+          <p className="text-xs font-semibold uppercase text-muted-foreground">
+            Aperçu de la formule
+          </p>
+          <p className="mt-2 break-words font-mono text-sm text-primary">{formulaLabel(formula)}</p>
+        </div>
+        {renderExpression(formula)}
+        <div className="flex items-center justify-between border-t border-border pt-4">
+          <span className="text-xs text-muted-foreground">
+            Les parenthèses représentent les groupes imbriqués.
+          </span>
+          <Button>Enregistrer {ratioName}</Button>
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+type RatioFormulaToken =
+  | { id: string; type: "attribute"; label: string; category: string }
+  | { id: string; type: "operation"; label: "+" | "-" | "*" | "/" | "(" | ")" }
+  | { id: string; type: "formula"; label: string }
+  | { id: string; type: "number"; label: string };
+
+function RatioFormulaBuilder() {
+  const [ratioName, setRatioName] = useState("Ratio d'endettement");
+  const [profile, setProfile] = useState("IMF");
+  const [formula, setFormula] = useState<RatioFormulaToken[]>([]);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [attributeMenuOpen, setAttributeMenuOpen] = useState(false);
+  const [numberValue, setNumberValue] = useState("");
+
+  const addToken = (token: Omit<RatioFormulaToken, "id">) => {
+    setFormula((current) => [...current, { ...token, id: formulaId() } as RatioFormulaToken]);
+    setMenuOpen(false);
+    setAttributeMenuOpen(false);
+  };
+  const removeToken = (id: string) =>
+    setFormula((current) => current.filter((token) => token.id !== id));
+  const expression = formula
+    .map((token) =>
+      token.type === "attribute" ? token.label.toLowerCase().replaceAll(" ", "_") : token.label,
+    )
+    .join(" ");
+
+  const tokenStyle = (type: RatioFormulaToken["type"]) =>
+    ({
+      attribute: "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100",
+      operation: "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200",
+      formula: "border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100",
+      number: "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
+    })[type];
+
+  return (
+    <Panel>
+      <PanelTitle
+        title="Créer un ratio financier"
+        subtitle="Insérez des blocs pour construire votre formule sans écrire de code"
+        action={
+          <Button size="sm" onClick={() => setFormula([])}>
+            <Plus /> Nouveau ratio
+          </Button>
+        }
+      />
+      <div className="space-y-5 p-5">
+        <div className="grid gap-3 md:grid-cols-[1fr_220px]">
+          <label className="text-xs font-semibold">
+            Nom du ratio
+            <Input
+              className="mt-2"
+              value={ratioName}
+              onChange={(event) => setRatioName(event.target.value)}
+            />
+          </label>
+          <label className="text-xs font-semibold">
+            Profil de contrepartie
+            <div className="mt-2">
+              <ConfigSelect value={profile} onValueChange={setProfile}>
+                <SelectItem value="IMF">IMF</SelectItem>
+                <SelectItem value="TPME">TPME</SelectItem>
+                <SelectItem value="BANQUE">Banque</SelectItem>
+              </ConfigSelect>
+            </div>
+          </label>
+        </div>
+
+        <div className="min-h-32 rounded-lg border-2 border-dashed border-border bg-muted/20 p-4 transition focus-within:border-primary/50">
+          <div className="flex min-h-24 flex-wrap items-center gap-2">
+            {formula.map((token) => (
+              <span
+                key={token.id}
+                className={cn(
+                  "group inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-semibold shadow-sm transition",
+                  tokenStyle(token.type),
+                )}
+              >
+                {token.type === "formula" && <span className="font-serif text-base">ƒ</span>}
+                {token.label}
+                <button
+                  type="button"
+                  onClick={() => removeToken(token.id)}
+                  className="ml-1 rounded-full p-0.5 opacity-60 hover:bg-black/10 hover:opacity-100"
+                  aria-label={`Supprimer ${token.label}`}
                 >
-                  <SelectItem value="Bilan">Bilan</SelectItem>
-                  <SelectItem value="Compte de résultat">Compte de résultat</SelectItem>
-                  <SelectItem value="Données métier">Données métier</SelectItem>
-                </ConfigSelect>
-              </div>
-            </label>
-            <label className="text-xs font-semibold">
-              Attribut
-              <div className="mt-2">
-                <ConfigSelect
-                  value={block.attribute}
-                  onValueChange={(value) => updateBlock(index, "attribute", value)}
-                >
-                  <SelectItem value="Dettes">Dettes</SelectItem>
-                  <SelectItem value="Résultat net">Résultat net</SelectItem>
-                  <SelectItem value="Actifs">Actifs</SelectItem>
-                  <SelectItem value="Portefeuille">Portefeuille</SelectItem>
-                </ConfigSelect>
-              </div>
-            </label>
-            <label className="text-xs font-semibold">
-              Opérateur
-              <div className="mt-2">
-                <ConfigSelect
-                  value={block.operator}
-                  onValueChange={(value) => updateBlock(index, "operator", value)}
-                >
-                  <SelectItem value="+">+</SelectItem>
-                  <SelectItem value="-">−</SelectItem>
-                  <SelectItem value="*">×</SelectItem>
-                  <SelectItem value="/">÷</SelectItem>
-                </ConfigSelect>
-              </div>
-            </label>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() =>
-                setBlocks((current) => current.filter((_, blockIndex) => blockIndex !== index))
-              }
-              disabled={blocks.length === 1}
-              aria-label="Supprimer le bloc"
-            >
-              <X />
-            </Button>
+                  <X className="size-3" />
+                </button>
+              </span>
+            ))}
+            <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="rounded-full border-dashed">
+                  <Plus /> Ajouter un élément
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-80 p-2">
+                {!attributeMenuOpen ? (
+                  <div className="grid gap-1">
+                    <p className="px-2 py-1 text-xs font-semibold uppercase text-muted-foreground">
+                      Type de bloc
+                    </p>
+                    <button
+                      onClick={() => setAttributeMenuOpen(true)}
+                      className="flex items-center gap-3 rounded-md p-2 text-left text-sm hover:bg-muted"
+                    >
+                      <span className="size-3 rounded-full bg-blue-500" />
+                      Attribut{" "}
+                      <span className="ml-auto text-xs text-muted-foreground">Bilan, Dettes</span>
+                    </button>
+                    <div className="grid grid-cols-3 gap-1 p-1">
+                      {(["+", "-", "*", "/", "(", ")"] as const).map((operator) => (
+                        <button
+                          key={operator}
+                          onClick={() => addToken({ type: "operation", label: operator })}
+                          className="rounded-md border border-slate-200 bg-slate-100 py-2 text-sm font-bold hover:bg-slate-200"
+                        >
+                          {operator}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => addToken({ type: "formula", label: "EBITDA" })}
+                      className="flex items-center gap-3 rounded-md p-2 text-left text-sm hover:bg-muted"
+                    >
+                      <span className="font-serif text-lg text-violet-600">ƒ</span>Formule imbriquée{" "}
+                      <span className="ml-auto text-xs text-muted-foreground">EBITDA</span>
+                    </button>
+                    <div className="flex items-center gap-2 p-2">
+                      <span className="size-3 rounded-full bg-emerald-500" />
+                      <Input
+                        type="number"
+                        value={numberValue}
+                        onChange={(event) => setNumberValue(event.target.value)}
+                        placeholder="Nombre"
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" && numberValue) {
+                            addToken({ type: "number", label: numberValue });
+                            setNumberValue("");
+                          }
+                        }}
+                      />
+                      <Button
+                        size="sm"
+                        disabled={!numberValue}
+                        onClick={() => {
+                          addToken({ type: "number", label: numberValue });
+                          setNumberValue("");
+                        }}
+                      >
+                        Insérer
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid gap-1">
+                    <div className="flex items-center gap-2 border-b border-border px-2 pb-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setAttributeMenuOpen(false)}
+                        aria-label="Retour"
+                      >
+                        <ChevronLeft />
+                      </Button>
+                      <span className="text-sm font-semibold">Choisir un attribut</span>
+                    </div>
+                    {[
+                      ["Bilan", "Dettes"],
+                      ["Bilan", "Actifs"],
+                      ["Compte de résultat", "Résultat net"],
+                      ["Données métier", "Portefeuille"],
+                    ].map(([category, label]) => (
+                      <button
+                        key={`${category}-${label}`}
+                        onClick={() => addToken({ type: "attribute", category, label })}
+                        className="rounded-md p-2 text-left hover:bg-blue-50"
+                      >
+                        <span className="block text-sm font-semibold text-blue-700">{label}</span>
+                        <span className="block text-xs text-muted-foreground">{category}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
           </div>
-        ))}
-        <Button
-          variant="outline"
-          onClick={() =>
-            setBlocks((current) => [
-              ...current,
-              { model: "Bilan", attribute: "Actifs", operator: "+" },
-            ])
-          }
-        >
-          <Plus /> Ajouter un bloc
-        </Button>
+          {formula.length === 0 && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Commencez par ajouter un attribut, une opération, une formule ou un nombre.
+            </p>
+          )}
+        </div>
+        <div className="rounded-md bg-muted/45 p-4">
+          <p className="text-xs font-semibold uppercase text-muted-foreground">
+            Traduction mathématique
+          </p>
+          <p className="mt-2 font-mono text-sm text-primary">
+            {expression || "Votre formule apparaîtra ici"}
+          </p>
+        </div>
+        <div className="flex justify-end border-t border-border pt-4">
+          <Button disabled={formula.length === 0}>Valider la formule</Button>
+        </div>
       </div>
     </Panel>
   );
@@ -2349,7 +2694,7 @@ function WorkflowConfigurator() {
 
 function RuleBuilder({
   title = "Règle métier",
-  subtitle = "Définissez une condition et l’action associée",
+  subtitle = "Définissez une condition et l'action associée",
 }: {
   title?: string;
   subtitle?: string;
@@ -2466,8 +2811,12 @@ function RuleBuilder({
             <div className="mt-2">
               <ConfigSelect value={action} onValueChange={setAction}>
                 <SelectItem value="Déclencher une alerte">Déclencher une alerte</SelectItem>
-                <SelectItem value="Statut = Refusé">Statut = Refusé</SelectItem>
-                <SelectItem value="Demander une revue">Demander une revue</SelectItem>
+                <SelectItem value="Déclencher une alerte">
+                  Déclencher une alerte de sévérité medium
+                </SelectItem>
+                <SelectItem value="Déclencher une alerte">
+                  Déclencher une alerte de sévérité high
+                </SelectItem>
               </ConfigSelect>
             </div>
           </label>
@@ -2484,9 +2833,8 @@ function MetricsWorkspace() {
   const [section, setSection] = useState("ratios");
   const sections = [
     ["ratios", "Ratios"],
-    ["covenants", "Covenants"],
     ["alerts", "Alertes"],
-    ["methodologies", "Méthodologies d’évaluation"],
+    ["methodologies", "Méthodologies d'évaluation"],
   ];
   return (
     <div className="space-y-5">
@@ -2506,13 +2854,7 @@ function MetricsWorkspace() {
           </button>
         ))}
       </div>
-      {section === "ratios" && <FormulaBuilder />}
-      {section === "covenants" && (
-        <RuleBuilder
-          title="Covenants"
-          subtitle="Paramétrez les seuils et les actions par profil de contrepartie"
-        />
-      )}
+      {section === "ratios" && <RatioFormulaBuilder />}
       {section === "alerts" && (
         <RuleBuilder
           title="Alertes"
@@ -2522,7 +2864,7 @@ function MetricsWorkspace() {
       {section === "methodologies" && (
         <Panel>
           <PanelTitle
-            title="Méthodologies d’évaluation"
+            title="Méthodologies d'évaluation des contreparties"
             subtitle="Regroupez les ratios utilisés par profil de contrepartie"
           />
           <div className="grid gap-4 p-5 md:grid-cols-2">
@@ -2562,7 +2904,7 @@ function QuestionnaireConfigurator() {
   const [open, setOpen] = useState(false);
   const [questions, setQuestions] = useState([
     ["Politique de gestion des risques", "Oui / Non / Partiellement", "Gouvernance", true],
-    ["Comité d’audit actif", "Oui / Non", "Gouvernance", true],
+    ["Comité d'audit actif", "Oui / Non", "Gouvernance", true],
     ["Commentaires sur les incidents récents", "Texte long", "Risques", false],
   ] as [string, string, string, boolean][]);
   return (
@@ -2934,7 +3276,7 @@ function ConfigurationWorkspace() {
   const [section, setSection] = useState<ConfigSection>("counterparties");
 
   const sections: { id: ConfigSection; label: string }[] = [
-    { id: "counterparties", label: "Modèles de données" },
+    { id: "counterparties", label: "Modèles de données financières" },
     { id: "templates", label: "Processus" },
     { id: "metrics", label: "Métriques" },
     { id: "questionnaires", label: "Questionnaires" },
@@ -2962,13 +3304,6 @@ function ConfigurationWorkspace() {
     ["Revenu", "Performance", "Monnaie", "MAD", "TPME", "Oui", "Validation"],
   ];
 
-  const metrics = [
-    ["PAR30", "Portfolio quality", "IMF", "Net impair / portefeuille", "Actif", "5 règles"],
-    ["ROA", "Rentabilité", "IMF", "Résultat net / actifs moyens", "Actif", "2 méthodes"],
-    ["DSCR", "Solvabilité", "TPME", "Cash flow / dette", "Actif", "3 covenants"],
-    ["EBITDA margin", "Rentabilité", "TPME", "EBITDA / revenue", "Brouillon", "1 méthode"],
-  ];
-
   const questionnaires = [
     ["Questionnaire IMF", "IMF", "6 sections", "28 questions", "Actif"],
     ["Questionnaire PME", "TPME", "5 sections", "19 questions", "Actif"],
@@ -2985,12 +3320,6 @@ function ConfigurationWorkspace() {
     ["Prêt de trésorerie", "Crédit", "MAD", "2 M - 20 M", "Actif", "5 règles"],
     ["Financement public", "Financement", "MAD", "5 M - 50 M", "Actif", "4 garanties"],
     ["Garantie", "Garantie", "MAD", "1 M - 10 M", "Actif", "2 conditions"],
-  ];
-
-  const covenants = [
-    ["PAR30 < 5%", "IMF", "Critique", "Actif", "24 clients"],
-    ["DSCR > 1,2x", "TPME", "Majeur", "Actif", "18 clients"],
-    ["Solvabilité > 15%", "IMF", "Moyen", "En pause", "6 clients"],
   ];
 
   const alerts = [
@@ -3162,7 +3491,7 @@ function ConfigurationWorkspace() {
           <Panel>
             <PanelTitle
               title="Questionnaires"
-              subtitle="Blocs de questions utilisés lors de l’évaluation et du suivi"
+              subtitle="Blocs de questions utilisés lors de l'évaluation et du suivi"
             />
             <div className="overflow-x-auto p-5">
               <table className="w-full min-w-[720px] text-left text-sm">
@@ -3196,7 +3525,7 @@ function ConfigurationWorkspace() {
         return (
           <Panel>
             <PanelTitle
-              title="Méthodologies d’évaluation"
+              title="Méthodologies d'évaluation"
               subtitle="Structure des dimensions, critères, règles et notation"
             />
             <div className="overflow-x-auto p-5">
@@ -3228,13 +3557,6 @@ function ConfigurationWorkspace() {
           </Panel>
         );
 
-      case "covenants":
-        return (
-          <RuleBuilder
-            title="Covenants & règles métier"
-            subtitle="Paramétrez les seuils contractuels et leurs actions"
-          />
-        );
       /* return (
           <Panel>
             <PanelTitle
@@ -3334,7 +3656,7 @@ function ConfigurationWorkspace() {
       <PageHeader
         eyebrow="Administration"
         title="Configuration du système"
-        description="Définir les référentiels, règles de monitoring et méthodologies applicables à l’institution."
+        description="Définir les référentiels, règles de monitoring et méthodologies applicables à l'institution."
         action={
           <Button>
             <Plus /> Nouveau paramètre
@@ -3590,7 +3912,7 @@ function Reports() {
           [
             "Rapport de due diligence",
             "Atlas Microfinance · DD-2026-084",
-            "Mis à jour aujourd’hui",
+            "Mis à jour aujourd'hui",
           ],
           ["Analyse financière", "Portefeuille IMF · T2 2026", "Généré le 17 sept."],
           ["Rapport de suivi", "Portefeuille consolidé · Août 2026", "Généré le 12 sept."],
