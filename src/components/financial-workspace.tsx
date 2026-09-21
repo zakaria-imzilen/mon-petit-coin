@@ -40,6 +40,7 @@ import {
   SlidersHorizontal,
   TrendingDown,
   TrendingUp,
+  Trash2,
   Upload,
   UserRound,
   Users,
@@ -49,6 +50,22 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
 type View =
@@ -66,7 +83,6 @@ type Tone = "neutral" | "success" | "warning" | "danger" | "info";
 type ClientTab =
   "overview" | "performance" | "periods" | "financing" | "covenants" | "documents" | "history";
 type ConfigSection =
-  | "dashboard"
   | "counterparties"
   | "dictionary"
   | "templates"
@@ -519,8 +535,8 @@ function Dossiers({ open }: { open: () => void }) {
             <thead>
               <tr className="border-b border-border bg-muted/45 text-[11px] font-bold uppercase text-muted-foreground">
                 {[
-                  "Dossier / Contrepartie",
-                  "Type",
+                  "Dossier",
+                  "Contrepartie",
                   "Demande",
                   "Étape actuelle",
                   "Risque",
@@ -589,8 +605,65 @@ const steps = [
   "Avis",
   "Décision",
 ];
+type WorkflowStep = {
+  id: string;
+  label: string;
+  description: string;
+  enabled: boolean;
+  target: "individual" | "legal-entity";
+};
+
+const workflowSteps: WorkflowStep[] = [
+  {
+    id: "information",
+    label: "Informations",
+    description: "Identité et documents de la contrepartie",
+    enabled: true,
+    target: "legal-entity",
+  },
+  {
+    id: "data",
+    label: "Données",
+    description: "Données financières et opérationnelles",
+    enabled: true,
+    target: "legal-entity",
+  },
+  {
+    id: "questionnaire",
+    label: "Questionnaire",
+    description: "Questions de gouvernance et de risques",
+    enabled: true,
+    target: "legal-entity",
+  },
+  {
+    id: "analysis",
+    label: "Analyse",
+    description: "Calcul des indicateurs et ratios",
+    enabled: true,
+    target: "legal-entity",
+  },
+  {
+    id: "opinion",
+    label: "Avis",
+    description: "Contributions des parties prenantes",
+    enabled: true,
+    target: "legal-entity",
+  },
+  {
+    id: "decision",
+    label: "Décision",
+    description: "Validation finale du dossier",
+    enabled: true,
+    target: "legal-entity",
+  },
+];
 function Dossier({ back }: { back: () => void }) {
-  const [tab, setTab] = useState("Analyse");
+  const [tab, setTab] = useState("Information");
+  const activeSteps = steps.filter(
+    (step) =>
+      step === "Évaluation" ||
+      workflowSteps.some((configured) => configured.label === step && configured.enabled),
+  );
   return (
     <>
       <button
@@ -622,7 +695,7 @@ function Dossier({ back }: { back: () => void }) {
       </div>
       <div className="my-5 overflow-x-auto">
         <div className="flex min-w-[820px]">
-          {steps.map((s, i) => (
+          {activeSteps.map((s, i) => (
             <button key={s} onClick={() => setTab(s)} className="group flex flex-1 items-center">
               <span
                 className={cn(
@@ -644,7 +717,7 @@ function Dossier({ back }: { back: () => void }) {
               >
                 {s}
               </span>
-              {i < steps.length - 1 && <span className="mx-3 h-px flex-1 bg-border" />}
+              {i < activeSteps.length - 1 && <span className="mx-3 h-px flex-1 bg-border" />}
             </button>
           ))}
         </div>
@@ -1198,7 +1271,20 @@ function ClientWorkspace({ back }: { back: () => void }) {
     { id: "covenants", label: "Covenants & Alerts" },
     { id: "documents", label: "Documents" },
     { id: "history", label: "History" },
-  ];
+  ].filter((item) => {
+    if (
+      item.id === "overview" ||
+      item.id === "financing" ||
+      item.id === "covenants" ||
+      item.id === "history"
+    )
+      return true;
+    if (item.id === "performance" || item.id === "periods")
+      return workflowSteps.some((step) => step.id === "data" && step.enabled);
+    if (item.id === "documents")
+      return workflowSteps.some((step) => step.id === "information" && step.enabled);
+    return true;
+  });
 
   const healthMetrics = [
     { label: "Portfolio", value: "42,5 M", prev: "39,9 M", change: "+6,5 %", trend: "up" },
@@ -1868,20 +1954,991 @@ function ClientWorkspace({ back }: { back: () => void }) {
   );
 }
 
+type RuleCondition = { model: string; attribute: string; operator: string; value: string };
+
+function ConfigSelect({
+  value,
+  onValueChange,
+  children,
+}: {
+  value: string;
+  onValueChange: (value: string) => void;
+  children: ReactNode;
+}) {
+  return (
+    <Select value={value} onValueChange={onValueChange}>
+      <SelectTrigger>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>{children}</SelectContent>
+    </Select>
+  );
+}
+
+function AttributeProfileEditor() {
+  const [profile, setProfile] = useState("IMF");
+  const [attributes, setAttributes] = useState([
+    ["legal_name", "Raison sociale", "Texte", true, true, "Identité"],
+    ["balance_sheet", "Bilan", "Document / import", true, true, "Financier"],
+    ["portfolio_at_risk", "PAR30", "Pourcentage", true, false, "Risque"],
+    ["board_minutes", "Procès-verbal du conseil", "Document", false, true, "Gouvernance"],
+    [
+      "geographic_concentration",
+      "Concentration géographique",
+      "Pourcentage",
+      false,
+      false,
+      "Risque",
+    ],
+  ] as [string, string, string, boolean, boolean, string][]);
+
+  const toggleAttribute = (id: string, checked: boolean) =>
+    setAttributes((current) =>
+      current.map((attribute) =>
+        attribute[0] === id
+          ? ([...attribute.slice(0, 3), checked, attribute[4], attribute[5]] as [
+              string,
+              string,
+              string,
+              boolean,
+              boolean,
+              string,
+            ])
+          : attribute,
+      ),
+    );
+  const toggleRequired = (id: string, required: boolean) =>
+    setAttributes((current) =>
+      current.map((attribute) =>
+        attribute[0] === id
+          ? [attribute[0], attribute[1], attribute[2], attribute[3], required, attribute[5]]
+          : attribute,
+      ),
+    );
+
+  return (
+    <Panel>
+      <PanelTitle
+        title="Modèles de données"
+        subtitle="Activez les attributs de la bibliothèque globale pour chaque profil de contrepartie"
+      />
+      <div className="flex flex-col gap-4 border-b border-border p-5 md:flex-row md:items-end md:justify-between">
+        <label className="block w-full max-w-xs text-xs font-semibold">
+          Profil de contrepartie
+          <div className="mt-2">
+            <ConfigSelect value={profile} onValueChange={setProfile}>
+              <SelectItem value="IMF">IMF · Institution de microfinance</SelectItem>
+              <SelectItem value="TPME">TPME · Petite et moyenne entreprise</SelectItem>
+              <SelectItem value="BANQUE">Banque · Institution financière</SelectItem>
+            </ConfigSelect>
+          </div>
+        </label>
+        <div className="rounded-md bg-info-soft px-3 py-2 text-xs text-primary">
+          {attributes.filter(([, , , enabled]) => enabled).length} attributs actifs pour {profile}
+        </div>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[760px] text-left text-sm">
+          <thead className="bg-muted/45 text-[11px] uppercase text-muted-foreground">
+            <tr>
+              {["Attribut", "Nom technique", "Type", "Activité", "Obligation", "Catégorie"].map(
+                (heading) => (
+                  <th key={heading} className="px-5 py-3">
+                    {heading}
+                  </th>
+                ),
+              )}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {attributes.map(([id, label, type, enabled, required, category]) => (
+              <tr key={id} className="hover:bg-muted/40">
+                <td className="px-5 py-4 font-semibold">{label}</td>
+                <td className="px-5 py-4 text-xs text-muted-foreground">{id}</td>
+                <td className="px-5 py-4">{type}</td>
+                <td className="px-5 py-4">
+                  <Switch
+                    checked={enabled}
+                    onCheckedChange={(checked) => toggleAttribute(id, checked)}
+                    aria-label={`Activer ${label}`}
+                  />
+                </td>
+                <td className="px-5 py-4">
+                  <Switch
+                    checked={required}
+                    onCheckedChange={(checked) => toggleRequired(id, checked)}
+                    aria-label={`${label} obligatoire`}
+                  />
+                </td>
+                <td className="px-5 py-4">
+                  <Status tone={enabled ? "success" : "neutral"}>{category}</Status>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Panel>
+  );
+}
+
+function FormulaBuilder() {
+  const [blocks, setBlocks] = useState([
+    { model: "Bilan", attribute: "Dettes", operator: "/" },
+    { model: "Compte de résultat", attribute: "Résultat net", operator: "+" },
+  ]);
+  const updateBlock = (index: number, key: "model" | "attribute" | "operator", value: string) =>
+    setBlocks((current) =>
+      current.map((block, blockIndex) =>
+        blockIndex === index ? { ...block, [key]: value } : block,
+      ),
+    );
+
+  return (
+    <Panel>
+      <PanelTitle
+        title="Indicateurs & éditeur de formules"
+        subtitle="Construisez un ratio avec les modèles et attributs disponibles"
+        action={
+          <Button size="sm">
+            <Plus /> Nouvel indicateur
+          </Button>
+        }
+      />
+      <div className="space-y-4 p-5">
+        <div className="rounded-md bg-muted/45 p-4 text-sm">
+          <span className="font-semibold">Aperçu : </span>
+          {blocks.map((block, index) => (
+            <span key={index}>
+              {index > 0 && ` ${block.operator} `}
+              <span className="font-semibold text-primary">{block.attribute}</span>
+            </span>
+          ))}
+        </div>
+        {blocks.map((block, index) => (
+          <div
+            key={index}
+            className="grid gap-3 rounded-md border border-border p-4 md:grid-cols-[1fr_1fr_120px_auto] md:items-end"
+          >
+            <label className="text-xs font-semibold">
+              Modèle
+              <div className="mt-2">
+                <ConfigSelect
+                  value={block.model}
+                  onValueChange={(value) => updateBlock(index, "model", value)}
+                >
+                  <SelectItem value="Bilan">Bilan</SelectItem>
+                  <SelectItem value="Compte de résultat">Compte de résultat</SelectItem>
+                  <SelectItem value="Données métier">Données métier</SelectItem>
+                </ConfigSelect>
+              </div>
+            </label>
+            <label className="text-xs font-semibold">
+              Attribut
+              <div className="mt-2">
+                <ConfigSelect
+                  value={block.attribute}
+                  onValueChange={(value) => updateBlock(index, "attribute", value)}
+                >
+                  <SelectItem value="Dettes">Dettes</SelectItem>
+                  <SelectItem value="Résultat net">Résultat net</SelectItem>
+                  <SelectItem value="Actifs">Actifs</SelectItem>
+                  <SelectItem value="Portefeuille">Portefeuille</SelectItem>
+                </ConfigSelect>
+              </div>
+            </label>
+            <label className="text-xs font-semibold">
+              Opérateur
+              <div className="mt-2">
+                <ConfigSelect
+                  value={block.operator}
+                  onValueChange={(value) => updateBlock(index, "operator", value)}
+                >
+                  <SelectItem value="+">+</SelectItem>
+                  <SelectItem value="-">−</SelectItem>
+                  <SelectItem value="*">×</SelectItem>
+                  <SelectItem value="/">÷</SelectItem>
+                </ConfigSelect>
+              </div>
+            </label>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() =>
+                setBlocks((current) => current.filter((_, blockIndex) => blockIndex !== index))
+              }
+              disabled={blocks.length === 1}
+              aria-label="Supprimer le bloc"
+            >
+              <X />
+            </Button>
+          </div>
+        ))}
+        <Button
+          variant="outline"
+          onClick={() =>
+            setBlocks((current) => [
+              ...current,
+              { model: "Bilan", attribute: "Actifs", operator: "+" },
+            ])
+          }
+        >
+          <Plus /> Ajouter un bloc
+        </Button>
+      </div>
+    </Panel>
+  );
+}
+
+function WorkflowConfigurator() {
+  const [selectedProfile, setSelectedProfile] = useState("IMF");
+  const [workflow, setWorkflow] = useState<"due-diligence" | "collection">("due-diligence");
+  const collectionSteps: WorkflowStep[] = [
+    {
+      id: "request",
+      label: "Demande de données",
+      description: "Définir la période et les données attendues",
+      enabled: true,
+      target: "legal-entity",
+    },
+    {
+      id: "submission",
+      label: "Soumission",
+      description: "Réception des données par le profil assigné",
+      enabled: true,
+      target: "legal-entity",
+    },
+    {
+      id: "validation",
+      label: "Contrôle et validation",
+      description: "Vérifier la complétude et la cohérence",
+      enabled: true,
+      target: "legal-entity",
+    },
+    {
+      id: "reminder",
+      label: "Relance",
+      description: "Notifier les contributeurs en retard",
+      enabled: true,
+      target: "legal-entity",
+    },
+  ];
+  const profiles = ["IMF", "TPME", "BANQUE"];
+  const [configurations, setConfigurations] = useState<
+    Record<string, Record<string, WorkflowStep[]>>
+  >(() =>
+    Object.fromEntries(
+      profiles.map((profile) => [
+        profile,
+        {
+          "due-diligence": workflowSteps.map((step) => ({ ...step })),
+          collection: collectionSteps.map((step) => ({ ...step })),
+        },
+      ]),
+    ),
+  );
+  const activeSteps = configurations[selectedProfile][workflow];
+  const updateStep = (id: string, changes: Partial<WorkflowStep>) =>
+    setConfigurations((current) => ({
+      ...current,
+      [selectedProfile]: {
+        ...current[selectedProfile],
+        [workflow]: current[selectedProfile][workflow].map((step) =>
+          step.id === id ? { ...step, ...changes } : step,
+        ),
+      },
+    }));
+
+  return (
+    <Panel>
+      <PanelTitle
+        title="Processus"
+        subtitle="Configurez les étapes prédéfinies pour chaque profil de contrepartie"
+      />
+      <div className="flex flex-col gap-4 border-b border-border p-5 md:flex-row md:items-end">
+        <div className="flex rounded-md border border-border p-1 text-sm">
+          <button
+            className={cn(
+              "rounded px-3 py-2",
+              workflow === "due-diligence" && "bg-primary text-primary-foreground",
+            )}
+            onClick={() => {
+              setWorkflow("due-diligence");
+            }}
+          >
+            Workflow de due diligence
+          </button>
+          <button
+            className={cn(
+              "rounded px-3 py-2",
+              workflow === "collection" && "bg-primary text-primary-foreground",
+            )}
+            onClick={() => setWorkflow("collection")}
+          >
+            Workflow de collection par saisie
+          </button>
+        </div>
+        <label className="block w-full max-w-xs text-xs font-semibold">
+          Profil de contrepartie
+          <div className="mt-2">
+            <ConfigSelect value={selectedProfile} onValueChange={setSelectedProfile}>
+              <SelectItem value="IMF">IMF</SelectItem>
+              <SelectItem value="TPME">TPME</SelectItem>
+              <SelectItem value="BANQUE">Banque</SelectItem>
+            </ConfigSelect>
+          </div>
+        </label>
+      </div>
+      <div className="divide-y divide-border">
+        {activeSteps.map((step, index) => (
+          <div key={step.id} className="grid gap-4 p-5 lg:grid-cols-4 lg:items-start">
+            <Switch
+              checked={step.enabled}
+              onCheckedChange={(checked) => updateStep(step.id, { enabled: checked })}
+              aria-label={`Activer ${step.label}`}
+            />
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="flex size-6 items-center justify-center rounded-full bg-secondary text-xs font-bold">
+                  {index + 1}
+                </span>
+                <p className="text-sm font-semibold">{step.label}</p>
+              </div>
+              <p className="mt-1 pl-8 text-xs text-muted-foreground">{step.description}</p>
+            </div>
+            <label className="text-xs font-semibold">
+              Assignation Personne Physique
+              <div className="mt-2">
+                <ConfigSelect
+                  value={step.target}
+                  onValueChange={(value) =>
+                    updateStep(step.id, { target: value as WorkflowStep["target"] })
+                  }
+                >
+                  <SelectItem value="individual">Gestionnaire</SelectItem>
+                  <SelectItem value="legal-entity">Responsable</SelectItem>
+                </ConfigSelect>
+              </div>
+            </label>
+            <label className="text-xs font-semibold">
+              Assignation Personne Morale
+              <div className="mt-2">
+                <ConfigSelect
+                  value={step.target}
+                  onValueChange={(value) =>
+                    updateStep(step.id, { target: value as WorkflowStep["target"] })
+                  }
+                >
+                  <SelectItem value="individual">Service client</SelectItem>
+                  <SelectItem value="legal-entity">Comité</SelectItem>
+                </ConfigSelect>
+              </div>
+            </label>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center justify-between border-t border-border bg-muted/25 px-5 py-3 text-xs text-muted-foreground">
+        <span>
+          {activeSteps.filter((step) => step.enabled).length} étapes actives pour {selectedProfile}
+        </span>
+        <Button size="sm">Enregistrer le workflow</Button>
+      </div>
+    </Panel>
+  );
+}
+
+function RuleBuilder({
+  title = "Règle métier",
+  subtitle = "Définissez une condition et l’action associée",
+}: {
+  title?: string;
+  subtitle?: string;
+}) {
+  const [conditions, setConditions] = useState<RuleCondition[]>([
+    { model: "Données métier", attribute: "PAR30", operator: ">", value: "5" },
+  ]);
+  const [action, setAction] = useState("Déclencher une alerte");
+  const updateCondition = (index: number, key: keyof RuleCondition, value: string) =>
+    setConditions((current) =>
+      current.map((condition, conditionIndex) =>
+        conditionIndex === index ? { ...condition, [key]: value } : condition,
+      ),
+    );
+  return (
+    <Panel>
+      <PanelTitle title={title} subtitle={subtitle} />
+      <div className="space-y-4 p-5">
+        {conditions.map((condition, index) => (
+          <div
+            key={index}
+            className="flex flex-col gap-3 rounded-md border border-border p-4 lg:flex-row lg:items-end"
+          >
+            <span className="pb-2 text-xs font-bold text-primary">
+              {index === 0 ? (
+                "SI"
+              ) : (
+                <ConfigSelect value="AND" onValueChange={() => undefined}>
+                  <SelectItem value="AND">ET</SelectItem>
+                  <SelectItem value="OR">OU</SelectItem>
+                </ConfigSelect>
+              )}
+            </span>
+            <label className="flex-1 text-xs font-semibold">
+              Modèle / attribut
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                <ConfigSelect
+                  value={condition.model}
+                  onValueChange={(value) => updateCondition(index, "model", value)}
+                >
+                  <SelectItem value="Données métier">Données métier</SelectItem>
+                  <SelectItem value="Bilan">Bilan</SelectItem>
+                  <SelectItem value="Compte de résultat">Compte de résultat</SelectItem>
+                </ConfigSelect>
+                <ConfigSelect
+                  value={condition.attribute}
+                  onValueChange={(value) => updateCondition(index, "attribute", value)}
+                >
+                  <SelectItem value="PAR30">PAR30</SelectItem>
+                  <SelectItem value="DSCR">DSCR</SelectItem>
+                  <SelectItem value="Solvabilité">Solvabilité</SelectItem>
+                </ConfigSelect>
+              </div>
+            </label>
+            <label className="w-full text-xs font-semibold lg:w-28">
+              Opérateur
+              <div className="mt-2">
+                <ConfigSelect
+                  value={condition.operator}
+                  onValueChange={(value) => updateCondition(index, "operator", value)}
+                >
+                  <SelectItem value=">">&gt;</SelectItem>
+                  <SelectItem value="<">&lt;</SelectItem>
+                  <SelectItem value="=">=</SelectItem>
+                  <SelectItem value="contains">contient</SelectItem>
+                </ConfigSelect>
+              </div>
+            </label>
+            <label className="w-full text-xs font-semibold lg:w-32">
+              Valeur
+              <Input
+                className="mt-2"
+                value={condition.value}
+                onChange={(event) => updateCondition(index, "value", event.target.value)}
+              />
+            </label>
+            {conditions.length > 1 && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() =>
+                  setConditions((current) =>
+                    current.filter((_, conditionIndex) => conditionIndex !== index),
+                  )
+                }
+                aria-label="Supprimer la condition"
+              >
+                <X />
+              </Button>
+            )}
+          </div>
+        ))}
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              setConditions((current) => [
+                ...current,
+                { model: "Données métier", attribute: "DSCR", operator: ">", value: "1,2" },
+              ])
+            }
+          >
+            <Plus /> Ajouter une condition
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            Les conditions sont combinées avec ET
+          </span>
+        </div>
+        <div className="flex flex-col gap-3 rounded-md bg-info-soft p-4 md:flex-row md:items-center">
+          <span className="text-xs font-bold text-primary">ALORS</span>
+          <label className="w-full max-w-sm text-xs font-semibold">
+            Action
+            <div className="mt-2">
+              <ConfigSelect value={action} onValueChange={setAction}>
+                <SelectItem value="Déclencher une alerte">Déclencher une alerte</SelectItem>
+                <SelectItem value="Statut = Refusé">Statut = Refusé</SelectItem>
+                <SelectItem value="Demander une revue">Demander une revue</SelectItem>
+              </ConfigSelect>
+            </div>
+          </label>
+        </div>
+        <div className="flex justify-end">
+          <Button>Enregistrer la règle</Button>
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+function MetricsWorkspace() {
+  const [section, setSection] = useState("ratios");
+  const sections = [
+    ["ratios", "Ratios"],
+    ["covenants", "Covenants"],
+    ["alerts", "Alertes"],
+    ["methodologies", "Méthodologies d’évaluation"],
+  ];
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap gap-2 border-b border-border pb-3">
+        {sections.map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setSection(id)}
+            className={cn(
+              "rounded-t-md border-b-2 px-3 py-2 text-sm",
+              section === id
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground",
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {section === "ratios" && <FormulaBuilder />}
+      {section === "covenants" && (
+        <RuleBuilder
+          title="Covenants"
+          subtitle="Paramétrez les seuils et les actions par profil de contrepartie"
+        />
+      )}
+      {section === "alerts" && (
+        <RuleBuilder
+          title="Alertes"
+          subtitle="Ajoutez et supprimez les règles de déclenchement métier"
+        />
+      )}
+      {section === "methodologies" && (
+        <Panel>
+          <PanelTitle
+            title="Méthodologies d’évaluation"
+            subtitle="Regroupez les ratios utilisés par profil de contrepartie"
+          />
+          <div className="grid gap-4 p-5 md:grid-cols-2">
+            <div className="rounded-md border border-border p-4">
+              <p className="text-xs font-semibold text-muted-foreground">Profil IMF</p>
+              <h3 className="mt-1 font-semibold">JAIDA IMF 2026</h3>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Status tone="info">PAR30</Status>
+                <Status tone="info">ROA</Status>
+                <Status tone="info">Solvabilité</Status>
+              </div>
+              <Button variant="outline" size="sm" className="mt-4">
+                Modifier le regroupement
+              </Button>
+            </div>
+            <div className="rounded-md border border-border p-4">
+              <p className="text-xs font-semibold text-muted-foreground">Profil TPME</p>
+              <h3 className="mt-1 font-semibold">Risk SME 2026</h3>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Status tone="info">DSCR</Status>
+                <Status tone="info">Marge EBITDA</Status>
+                <Status tone="info">Endettement</Status>
+              </div>
+              <Button variant="outline" size="sm" className="mt-4">
+                Modifier le regroupement
+              </Button>
+            </div>
+          </div>
+        </Panel>
+      )}
+    </div>
+  );
+}
+
+function QuestionnaireConfigurator() {
+  const [profile, setProfile] = useState("IMF");
+  const [open, setOpen] = useState(false);
+  const [questions, setQuestions] = useState([
+    ["Politique de gestion des risques", "Oui / Non / Partiellement", "Gouvernance", true],
+    ["Comité d’audit actif", "Oui / Non", "Gouvernance", true],
+    ["Commentaires sur les incidents récents", "Texte long", "Risques", false],
+  ] as [string, string, string, boolean][]);
+  return (
+    <>
+      <Panel>
+        <PanelTitle
+          title="Questionnaires"
+          subtitle="Sélectionnez un profil pour paramétrer ses questions"
+        />
+        <div className="border-b border-border p-5">
+          <label className="block max-w-xs text-xs font-semibold">
+            Profil de questionnaire
+            <div className="mt-2">
+              <ConfigSelect
+                value={profile}
+                onValueChange={(value) => {
+                  setProfile(value);
+                  setOpen(true);
+                }}
+              >
+                <SelectItem value="IMF">IMF</SelectItem>
+                <SelectItem value="TPME">TPME</SelectItem>
+                <SelectItem value="BANQUE">Banque</SelectItem>
+              </ConfigSelect>
+            </div>
+          </label>
+        </div>
+        <div className="divide-y divide-border">
+          {questions.map(([question, type, category, required]) => (
+            <div key={question} className="flex items-center gap-4 p-5">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold">{question}</p>
+                <p className="text-xs text-muted-foreground">
+                  {category} · {type}
+                </p>
+              </div>
+              <Status tone={required ? "warning" : "neutral"}>
+                {required ? "Obligatoire" : "Optionnelle"}
+              </Status>
+              <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
+                Modifier
+              </Button>
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-end p-5">
+          <Button onClick={() => setOpen(true)}>
+            <Plus /> Ajouter une question
+          </Button>
+        </div>
+      </Panel>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/30 p-4">
+          <div className="w-full max-w-2xl rounded-lg border border-border bg-card shadow-xl">
+            <div className="flex items-center justify-between border-b border-border p-5">
+              <div>
+                <h2 className="font-semibold">Paramétrer le questionnaire {profile}</h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Type de réponse, catégorie et obligation
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setOpen(false)}
+                aria-label="Fermer"
+              >
+                <X />
+              </Button>
+            </div>
+            <div className="space-y-3 p-5">
+              {questions.map(([question, type, category, required], index) => (
+                <div
+                  key={question}
+                  className="grid gap-3 rounded-md border border-border p-3 md:grid-cols-[1fr_150px_140px_auto]"
+                >
+                  <Input
+                    value={question}
+                    onChange={(event) =>
+                      setQuestions((current) =>
+                        current.map((item, itemIndex) =>
+                          itemIndex === index
+                            ? [event.target.value, item[1], item[2], item[3]]
+                            : item,
+                        ),
+                      )
+                    }
+                  />
+                  <ConfigSelect
+                    value={type}
+                    onValueChange={(value) =>
+                      setQuestions((current) =>
+                        current.map((item, itemIndex) =>
+                          itemIndex === index ? [item[0], value, item[2], item[3]] : item,
+                        ),
+                      )
+                    }
+                  >
+                    <SelectItem value="Oui / Non">Oui / Non</SelectItem>
+                    <SelectItem value="Oui / Non / Partiellement">
+                      Oui / Non / Partiellement
+                    </SelectItem>
+                    <SelectItem value="Choix multiple">Choix multiple</SelectItem>
+                    <SelectItem value="Texte long">Texte long</SelectItem>
+                  </ConfigSelect>
+                  <ConfigSelect
+                    value={category}
+                    onValueChange={(value) =>
+                      setQuestions((current) =>
+                        current.map((item, itemIndex) =>
+                          itemIndex === index ? [item[0], item[1], value, item[3]] : item,
+                        ),
+                      )
+                    }
+                  >
+                    <SelectItem value="Gouvernance">Gouvernance</SelectItem>
+                    <SelectItem value="Risques">Risques</SelectItem>
+                    <SelectItem value="Financier">Financier</SelectItem>
+                  </ConfigSelect>
+                  <Switch
+                    checked={required}
+                    onCheckedChange={(checked) =>
+                      setQuestions((current) =>
+                        current.map((item, itemIndex) =>
+                          itemIndex === index ? [item[0], item[1], item[2], checked] : item,
+                        ),
+                      )
+                    }
+                    aria-label="Question obligatoire"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2 border-t border-border p-5">
+              <Button variant="outline" onClick={() => setOpen(false)}>
+                Annuler
+              </Button>
+              <Button onClick={() => setOpen(false)}>Enregistrer</Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function ProductConfigurator() {
+  type Product = {
+    id: number;
+    profile: string;
+    name: string;
+    type: string;
+    currency: string;
+    range: string;
+    active: boolean;
+  };
+  const [profile, setProfile] = useState("IMF");
+  const [products, setProducts] = useState<Product[]>([
+    {
+      id: 1,
+      profile: "IMF",
+      name: "Prêt de trésorerie",
+      type: "Crédit",
+      currency: "MAD",
+      range: "2 M - 20 M",
+      active: true,
+    },
+    {
+      id: 2,
+      profile: "IMF",
+      name: "Garantie portefeuille",
+      type: "Garantie",
+      currency: "MAD",
+      range: "1 M - 10 M",
+      active: true,
+    },
+    {
+      id: 3,
+      profile: "TPME",
+      name: "Financement public",
+      type: "Financement",
+      currency: "MAD",
+      range: "5 M - 50 M",
+      active: true,
+    },
+  ]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [draft, setDraft] = useState({ name: "", type: "Crédit", currency: "MAD", range: "" });
+  const visibleProducts = products.filter((product) => product.profile === profile);
+  const openProduct = (product?: Product) => {
+    setEditingId(product?.id ?? null);
+    setDraft(
+      product
+        ? {
+            name: product.name,
+            type: product.type,
+            currency: product.currency,
+            range: product.range,
+          }
+        : { name: "", type: "Crédit", currency: "MAD", range: "" },
+    );
+    setDialogOpen(true);
+  };
+  const saveProduct = () => {
+    if (!draft.name.trim()) return;
+    setProducts((current) =>
+      editingId === null
+        ? [...current, { id: Date.now(), profile, ...draft, active: true }]
+        : current.map((product) => (product.id === editingId ? { ...product, ...draft } : product)),
+    );
+    setDialogOpen(false);
+  };
+  return (
+    <>
+      <Panel>
+        <PanelTitle
+          title="Produits de financement"
+          subtitle="Ajoutez, modifiez et supprimez les produits disponibles pour chaque type de contrepartie"
+          action={
+            <Button size="sm" onClick={() => openProduct()}>
+              <Plus /> Ajouter un produit
+            </Button>
+          }
+        />
+        <div className="border-b border-border p-5">
+          <label className="block max-w-xs text-xs font-semibold">
+            Type de contrepartie
+            <div className="mt-2">
+              <ConfigSelect value={profile} onValueChange={setProfile}>
+                <SelectItem value="IMF">IMF · Institution de microfinance</SelectItem>
+                <SelectItem value="TPME">TPME · Petite et moyenne entreprise</SelectItem>
+                <SelectItem value="BANQUE">Banque · Institution financière</SelectItem>
+              </ConfigSelect>
+            </div>
+          </label>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[800px] text-left text-sm">
+            <thead className="bg-muted/45 text-[11px] uppercase text-muted-foreground">
+              <tr>
+                {["Produit", "Type", "Devise", "Plage", "Statut", "Actions"].map((heading) => (
+                  <th key={heading} className="px-5 py-3">
+                    {heading}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {visibleProducts.map((product) => (
+                <tr key={product.id}>
+                  <td className="px-5 py-4 font-semibold">{product.name}</td>
+                  <td className="px-5 py-4">{product.type}</td>
+                  <td className="px-5 py-4">{product.currency}</td>
+                  <td className="px-5 py-4">{product.range}</td>
+                  <td className="px-5 py-4">
+                    <Switch
+                      checked={product.active}
+                      onCheckedChange={(active) =>
+                        setProducts((current) =>
+                          current.map((item) =>
+                            item.id === product.id ? { ...item, active } : item,
+                          ),
+                        )
+                      }
+                    />
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      {product.active ? "Actif" : "Inactif"}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4">
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => openProduct(product)}>
+                        Modifier
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() =>
+                          setProducts((current) => current.filter((item) => item.id !== product.id))
+                        }
+                        aria-label={`Supprimer ${product.name}`}
+                      >
+                        <Trash2 />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {visibleProducts.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-5 py-10 text-center text-sm text-muted-foreground">
+                    Aucun produit pour ce profil.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingId === null ? "Ajouter un produit" : "Modifier le produit"}
+            </DialogTitle>
+            <DialogDescription>Ce produit sera associé au profil {profile}.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <label className="text-xs font-semibold">
+              Nom du produit
+              <Input
+                className="mt-2"
+                value={draft.name}
+                onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+              />
+            </label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="text-xs font-semibold">
+                Type
+                <div className="mt-2">
+                  <ConfigSelect
+                    value={draft.type}
+                    onValueChange={(value) => setDraft({ ...draft, type: value })}
+                  >
+                    <SelectItem value="Crédit">Crédit</SelectItem>
+                    <SelectItem value="Financement">Financement</SelectItem>
+                    <SelectItem value="Garantie">Garantie</SelectItem>
+                  </ConfigSelect>
+                </div>
+              </label>
+              <label className="text-xs font-semibold">
+                Devise
+                <div className="mt-2">
+                  <ConfigSelect
+                    value={draft.currency}
+                    onValueChange={(value) => setDraft({ ...draft, currency: value })}
+                  >
+                    <SelectItem value="MAD">MAD</SelectItem>
+                    <SelectItem value="EUR">EUR</SelectItem>
+                    <SelectItem value="USD">USD</SelectItem>
+                  </ConfigSelect>
+                </div>
+              </label>
+            </div>
+            <label className="text-xs font-semibold">
+              Plage de financement
+              <Input
+                className="mt-2"
+                placeholder="2 M - 20 M"
+                value={draft.range}
+                onChange={(event) => setDraft({ ...draft, range: event.target.value })}
+              />
+            </label>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={saveProduct}>Enregistrer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 function ConfigurationWorkspace() {
-  const [section, setSection] = useState<ConfigSection>("dashboard");
+  const [section, setSection] = useState<ConfigSection>("counterparties");
 
   const sections: { id: ConfigSection; label: string }[] = [
-    { id: "dashboard", label: "Vue d’ensemble" },
-    { id: "counterparties", label: "Types de contreparties" },
-    { id: "dictionary", label: "Dictionnaire des données" },
-    { id: "templates", label: "Modèles de collecte" },
-    { id: "metrics", label: "Indicateurs" },
+    { id: "counterparties", label: "Modèles de données" },
+    { id: "templates", label: "Processus" },
+    { id: "metrics", label: "Métriques" },
     { id: "questionnaires", label: "Questionnaires" },
-    { id: "methodologies", label: "Méthodes" },
     { id: "products", label: "Produits de financement" },
-    { id: "covenants", label: "Covenants" },
-    { id: "alerts", label: "Alertes & actions" },
   ];
 
   const summaryCards = [
@@ -1945,7 +3002,8 @@ function ConfigurationWorkspace() {
   const renderSection = () => {
     switch (section) {
       case "counterparties":
-        return (
+        return <AttributeProfileEditor />;
+      /* return (
           <Panel>
             <PanelTitle
               title="Types de contreparties"
@@ -1978,7 +3036,7 @@ function ConfigurationWorkspace() {
               </table>
             </div>
           </Panel>
-        );
+        ); */
       case "dictionary":
         return (
           <Panel>
@@ -2023,7 +3081,8 @@ function ConfigurationWorkspace() {
           </Panel>
         );
       case "templates":
-        return (
+        return <WorkflowConfigurator />;
+      /* return (
           <Panel>
             <PanelTitle
               title="Modèles de collecte"
@@ -2058,9 +3117,10 @@ function ConfigurationWorkspace() {
               ))}
             </div>
           </Panel>
-        );
+        ); */
       case "metrics":
-        return (
+        return <MetricsWorkspace />;
+      /* return (
           <Panel>
             <PanelTitle
               title="Indicateurs & ratios"
@@ -2095,9 +3155,10 @@ function ConfigurationWorkspace() {
               </table>
             </div>
           </Panel>
-        );
+        ); */
       case "questionnaires":
-        return (
+        return <QuestionnaireConfigurator />;
+      /* return (
           <Panel>
             <PanelTitle
               title="Questionnaires"
@@ -2166,45 +3227,15 @@ function ConfigurationWorkspace() {
             </div>
           </Panel>
         );
-      case "products":
-        return (
-          <Panel>
-            <PanelTitle
-              title="Produits de financement"
-              subtitle="Catalogue de produits utilisables par les institutions"
-            />
-            <div className="overflow-x-auto p-5">
-              <table className="w-full min-w-[760px] text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/40 text-[11px] uppercase text-muted-foreground">
-                    <th className="px-4 py-3">Produit</th>
-                    <th className="px-4 py-3">Type</th>
-                    <th className="px-4 py-3">Devise</th>
-                    <th className="px-4 py-3">Plage</th>
-                    <th className="px-4 py-3">Statut</th>
-                    <th className="px-4 py-3">Règles</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {financingProducts.map(([name, type, currency, range, status, rules]) => (
-                    <tr key={name} className="hover:bg-muted/40">
-                      <td className="px-4 py-4 font-semibold">{name}</td>
-                      <td className="px-4 py-4">{type}</td>
-                      <td className="px-4 py-4">{currency}</td>
-                      <td className="px-4 py-4">{range}</td>
-                      <td className="px-4 py-4">
-                        <Status tone={status === "Actif" ? "success" : "warning"}>{status}</Status>
-                      </td>
-                      <td className="px-4 py-4">{rules}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Panel>
-        );
+
       case "covenants":
         return (
+          <RuleBuilder
+            title="Covenants & règles métier"
+            subtitle="Paramétrez les seuils contractuels et leurs actions"
+          />
+        );
+      /* return (
           <Panel>
             <PanelTitle
               title="Covenants"
@@ -2249,162 +3280,51 @@ function ConfigurationWorkspace() {
               </table>
             </div>
           </Panel>
-        );
+        ); */
       case "alerts":
+        return (
+          <RuleBuilder
+            title="Alertes & actions"
+            subtitle="Définissez les déclencheurs communs aux profils de contreparties"
+          />
+        );
+
+      case "products":
         return (
           <Panel>
             <PanelTitle
-              title="Alertes & actions"
-              subtitle="Règles de déclenchement et mécanismes d’escalade"
+              title="Produits de financement"
+              subtitle="Catalogue de produits utilisables par les institutions"
             />
             <div className="overflow-x-auto p-5">
               <table className="w-full min-w-[760px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/40 text-[11px] uppercase text-muted-foreground">
-                    <th className="px-4 py-3">Alerte</th>
+                    <th className="px-4 py-3">Produit</th>
                     <th className="px-4 py-3">Type</th>
-                    <th className="px-4 py-3">Sévérité</th>
-                    <th className="px-4 py-3">Action</th>
+                    <th className="px-4 py-3">Devise</th>
+                    <th className="px-4 py-3">Plage</th>
                     <th className="px-4 py-3">Statut</th>
+                    <th className="px-4 py-3">Règles</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {alerts.map(([name, type, severity, action, status]) => (
+                  {financingProducts.map(([name, type, currency, range, status, rules]) => (
                     <tr key={name} className="hover:bg-muted/40">
                       <td className="px-4 py-4 font-semibold">{name}</td>
                       <td className="px-4 py-4">{type}</td>
+                      <td className="px-4 py-4">{currency}</td>
+                      <td className="px-4 py-4">{range}</td>
                       <td className="px-4 py-4">
-                        <Status
-                          tone={
-                            severity === "Majeure"
-                              ? "danger"
-                              : severity === "Moyenne"
-                                ? "warning"
-                                : "info"
-                          }
-                        >
-                          {severity}
-                        </Status>
+                        <Status tone={status === "Actif" ? "success" : "warning"}>{status}</Status>
                       </td>
-                      <td className="px-4 py-4 text-muted-foreground">{action}</td>
-                      <td className="px-4 py-4">
-                        <Status tone={status === "Actif" ? "success" : "neutral"}>{status}</Status>
-                      </td>
+                      <td className="px-4 py-4">{rules}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           </Panel>
-        );
-      default:
-        return (
-          <>
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              {summaryCards.map(([label, value, detail, tone]) => (
-                <Metric
-                  key={label}
-                  label={label ?? ""}
-                  value={value ?? ""}
-                  detail={detail ?? ""}
-                  tone={tone as Tone}
-                  icon={Gauge}
-                />
-              ))}
-            </div>
-
-            <div className="mt-5 grid gap-5 xl:grid-cols-[1.35fr_0.95fr]">
-              <Panel>
-                <PanelTitle
-                  title="Santé de la configuration"
-                  subtitle="État général des paramètres et dépendances"
-                />
-                <div className="grid gap-4 p-5 md:grid-cols-2">
-                  <div className="rounded-md border border-border p-4">
-                    <p className="text-xs uppercase text-muted-foreground">
-                      Configuration complète
-                    </p>
-                    <p className="mt-2 text-3xl font-bold">96%</p>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      3 indicateurs avec validation en attente
-                    </p>
-                  </div>
-                  <div className="rounded-md border border-border p-4">
-                    <p className="text-xs uppercase text-muted-foreground">Méthodes non validées</p>
-                    <p className="mt-2 text-3xl font-bold">3</p>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      1 méthode manque des références obligatoires
-                    </p>
-                  </div>
-                </div>
-              </Panel>
-
-              <Panel>
-                <PanelTitle
-                  title="Modifications récentes"
-                  subtitle="Derniers changements de configuration"
-                />
-                <div className="space-y-3 p-5">
-                  {[
-                    ["PAR30 : seuil mis à jour", "Risque IMF"],
-                    ["Nouvelle méthode TPME créée", "Équipe de risque"],
-                    ["Modèle de reporting Q3 ajouté", "Reporting"],
-                    ["Nouvel alert covenants activé", "Monitoring"],
-                  ].map(([label, detail]) => (
-                    <div key={label} className="rounded-md border border-border p-3">
-                      <p className="text-sm font-medium">{label}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
-                    </div>
-                  ))}
-                </div>
-              </Panel>
-            </div>
-
-            <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_1fr]">
-              <Panel>
-                <PanelTitle
-                  title="Impact & dépendances"
-                  subtitle="Effets potentiels d’un changement de configuration"
-                />
-                <div className="space-y-3 p-5">
-                  {[
-                    ["PAR30", "Utilisé dans 2 méthodologies, 3 covenants et 1 benchmark"],
-                    ["Méthode IMF 2026", "Impact sur 6 règles d’évaluation et 14 alarmes"],
-                    [
-                      "Produit de financement",
-                      "Affecte l’éligibilité sur 3 types de contreparties",
-                    ],
-                  ].map(([label, detail]) => (
-                    <div key={label} className="rounded-md border border-border p-3">
-                      <p className="text-sm font-semibold">{label}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
-                    </div>
-                  ))}
-                </div>
-              </Panel>
-
-              <Panel>
-                <PanelTitle
-                  title="Exemple de configuration"
-                  subtitle="Mise en cohérence entre référentiels et opérations"
-                />
-                <div className="space-y-4 p-5">
-                  <div className="rounded-md border border-border p-3">
-                    <p className="text-sm font-semibold">Institution A — IMF</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Méthode : IMF Financial Risk · Indicateurs : PAR30, ROA, solvabilité
-                    </p>
-                  </div>
-                  <div className="rounded-md border border-border p-3">
-                    <p className="text-sm font-semibold">Institution B — TPME</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Méthode : SME Credit Risk · Indicateurs : DSCR, EBITDA, endettement
-                    </p>
-                  </div>
-                </div>
-              </Panel>
-            </div>
-          </>
         );
     }
   };
